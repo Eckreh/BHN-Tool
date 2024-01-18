@@ -67,7 +67,7 @@ class Barkhausen_data:
         self.data=self.sizes
     
     def set_style(self):  #set the plotting fontsizes etc
-        plt.style.use('seaborn-whitegrid')
+        plt.style.use('seaborn-v0_8-whitegrid')
 
         tex_fonts = {
             # Use LaTeX to write all text
@@ -126,7 +126,7 @@ class Barkhausen_data:
         exponent=popt[0]
         error=np.sqrt(pcov[0][0])
         fitdata=popt
-        return np.array([error,exponent,fitdata])
+        return np.array([error,exponent,fitdata],dtype=object)
     
     def bins_hist(self,binnr=50):
         edges, hist = powerlaw.pdf(self.data,number_of_bins=binnr)
