@@ -1,0 +1,7 @@
+generally the fit only showed any impact for 1Hz DWM with pvdf
+the data is being analyzed around some Maxima but Setting the tcut and Icut to include the whole set 
+will fix problems with that
+
+the other versions folder has similiar scripts from the same base, 
+one does the analysis shown in section 5.3 of the thesis
+the other one does what was shown in Appendix A4
