@@ -20,7 +20,8 @@ from mpl_axes_aligner import align
 import os
 import powerlaw
 
-plt.style.use('seaborn-whitegrid')
+#plt.style.use('seaborn-whitegrid')
+plt.style.use('seaborn-v0_8-whitegrid')
 
 params = {'axes.labelsize': 18,'axes.titlesize':16,  'legend.fontsize': 16, 'legend.frameon': True, 'xtick.labelsize': 16, 'ytick.labelsize': 16}
 plt.rcParams.update(params)
