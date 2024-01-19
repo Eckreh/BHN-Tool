@@ -18,12 +18,13 @@ from scipy.special import erf
 from scipy.signal import find_peaks
 import os
 import powerlaw
-from barkhausen_class import Barkhausen_data , load_bark , plot_datasets
+from barkhausen_class import Barkhausen_data, load_bark, plot_datasets
 import sys
 
 from mpl_axes_aligner import align
 
-plt.style.use('seaborn-whitegrid')
+#plt.style.use('seaborn-whitegrid')
+plt.style.use('seaborn-v0_8-whitegrid')
 
 
 params = {'axes.labelsize': 18,'axes.titlesize':26,  'legend.fontsize': 16, 'legend.frameon': True, 'xtick.labelsize': 18, 'ytick.labelsize': 18}
