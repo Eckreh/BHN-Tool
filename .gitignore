@@ -1,2 +1,3 @@
 data to test programs/
-__pycache__
+__pycache__/
+venv/
