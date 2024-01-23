@@ -8,7 +8,6 @@ Created on Tue May  2 10:34:56 2023
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-
 import scipy
 from scipy import integrate
 from scipy.optimize import curve_fit
@@ -20,10 +19,8 @@ import os
 import powerlaw
 from barkhausen_class import Barkhausen_data, load_bark, plot_datasets
 import sys
-
 from mpl_axes_aligner import align
 
-#plt.style.use('seaborn-whitegrid')
 plt.style.use('seaborn-v0_8-whitegrid')
 
 
@@ -31,19 +28,19 @@ params = {'axes.labelsize': 18,'axes.titlesize':26,  'legend.fontsize': 16, 'leg
 plt.rcParams.update(params)
 #%%functions
 
-def gauss(x,sigma,mu):
+def gauss(x, sigma, mu):
     return np.exp(-((((x)-mu)**2/np.sqrt(2*np.pi)*sigma)))
 
-def skewed_normal(x,mu,alpha,d,c,b):
+def skewed_normal(x, mu, alpha, d, c, b):
     return 1/2*c*(1+erf(alpha*((x-mu)/b)/np.sqrt(2)))*1/np.sqrt(2*np.pi)*np.exp(-((x-mu)/b)**2/2)+d
 
-def Lorentz(x,mu,gamma,a,b,c):
+def Lorentz(x, mu, gamma, a, b, c):
     return a/np.pi*(1/2*gamma/(((x-mu)/c)**2+(1/2*gamma)**2))+b
 
-def lin_fit(x,a,b):
-    return a*x+b
+def lin_fit(x, a, b):
+    return a*x + b
 
-def analyze(data,xmin,xmax,binnumber,datatype='eventsize'):
+def analyze(data, xmin, xmax, binnumber, datatype='eventsize'):
     params = {'axes.labelsize': 22,'axes.titlesize':26,  'legend.fontsize': 20, 'legend.frameon': True, 'xtick.labelsize': 18, 'ytick.labelsize': 18}
     plt.rcParams.update(params)
     
@@ -85,16 +82,15 @@ def analyze(data,xmin,xmax,binnumber,datatype='eventsize'):
     plt.show()
     startvalue=xmin
 
-    return fit,popt,pcov,bin_centers,hist
+    return fit, popt, pcov, bin_centers, hist
 
-
-def analyze_setxmin(data,xmin,xmax,binnumber,datatype='eventsize'):
+def analyze_setxmin(data, xmin, xmax, binnumber, datatype='eventsize'):
     
-    plt.rc('font',size=16)
-    plt.figure(figsize=(10,6))
-    plt.grid(which='major',axis='both')
+    plt.rc('font', size=16)
+    plt.figure(figsize=(10, 6))
+    plt.grid(which='major', axis='both')
     
-    edges, hist = powerlaw.pdf(data,number_of_bins=binnumber)
+    edges, hist = powerlaw.pdf(data, number_of_bins=binnumber)
 
     bin_centers = (edges[1:]+edges[:-1])/2.0
 
@@ -528,26 +524,3 @@ plt.xlabel(r'point at which the powre law behaviour starts $x_{min}$')
 plt.ylabel(r'Power law exponent estimate $\hat{\alpha}$')
 plt.legend()
 plt.show()
-
-#%% same procedure for the sizelist
-# explist=[]
-# sigmalist=[]
-# minlist=np.logspace(np.log10(min(maxlist)),np.log10(max(maxlist)/6),50)
-# for xmin in minlist:
-#     fit=powerlaw.Fit(maxlist,xmin=xmin)
-#     explist.append(fit.alpha)
-#     sigmalist.append((fit.sigma))
-# fit=powerlaw.Fit(maxlist)
-# plt.errorbar(minlist,explist,sigmalist,linewidth=0.2,elinewidth=0.4,barsabove=True)
-# plt.scatter(minlist,explist,color='blue',s=0.2)
-# # maxlist=np.log(maxlist)
-# plt.hlines(fit.alpha,min(maxlist),max(maxlist)/6,linestyle='-',color='red',label=r'$\alpha =$ {}'.format(round(fit.alpha,2)))
-# # plt.hlines(fit.alpha+fit.sigma,min(maxlist),max(maxlist)/6,color='green',label='standard deviation')
-# # plt.hlines(fit.alpha-fit.sigma,min(maxlist),max(maxlist)/6,color='green')
-# plt.xscale('log')
-# plt.xlabel('start of powerlaw behaviour')
-# plt.ylabel('estimated Exponent')
-# # plt.xlim(1e-8,1e-4)
-# # plt.ylim(1.4,2.2)
-# plt.legend()
-# plt.show()
