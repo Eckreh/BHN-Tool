@@ -108,7 +108,7 @@ def analyze_setxmin(data, xmin, xmax, binnumber, datatype='eventsize'):
     bin_centers=bin_centers[hist!=0]
     hist=hist[hist!=0]
 
-    popt,pcov=curve_fit(lin_fit,np.log(bin_centers),np.log(hist))
+    popt, pcov=curve_fit(lin_fit,np.log(bin_centers),np.log(hist))
 
     fitlin=np.exp(lin_fit(np.log(bin_centers),*popt))
     plt.plot(bin_centers,fitlin,label=r'$\alpha_{Lin}$'+r'={} $\pm${}'.format(np.abs(round(float(popt[0]),2)),round(float(np.sqrt(pcov[0][0])),2)))
@@ -160,9 +160,13 @@ def compare(datalist,labellist=['labels']):
     # plt.grid(True)
     plt.show()
     return
-#%% load data create lists for the resulting barkhausen pulses
 
-folder=r'\\heivol-i.ad.uni-heidelberg.de\cam\Research\Groups\AG_Kemerink\Group Members\Seiler, Toni\barkhausen measurements\29_09_23 samples julius 1\action at the start'
+# %% load data create lists for the resulting barkhausen pulses
+
+
+#folder = r'Z:\Group Members\Hecker, Marcel\240122_Measurement\PVDF Toni MM B3_1\3Vpp_3.75MHz_20x_50Hz_PN'
+
+
 
 
 sizelist=[] 
@@ -171,133 +175,107 @@ waitlist=[]
 durationlist=[]
 
 varlist=[[],[]]
-
 lastidx=0
-#%% settings for the threshold, input resistance and what is supposed to be plotted
-upperlimit=3e-3
-k=0
-var=0
-resistance=50
-plot=True
-plotoriginal=True
-ploteventdists=False
 
-split=False
+# %% settings for the threshold, input resistance and what is supposed to be plotted
+upperlimit = 3e-3
+k = 0
+var = 0
+resistance = 50  # Ohm
+
+plot = True
+plotoriginal = True
+ploteventdists = True
+split = False
+
+
+# %% functions
+
+def read_data(filepath):
+    
+    colnamesmfli = ['Time [s]', 'Vout [V]', 'Current [A]']
+    data = pd.read_csv(filepath, comment='%', sep=';', names=colnamesmfli).values
+    
+    t = data[0:, 0]
+    vout = data[0:, 1]
+    ch2 = np.zeros(len(t))
+    
+    if not np.isnan(data[0, 2]):
+        ch2 = data[0:, 2]
+
+    return t, vout, ch2
+
+
+def time_to_samples(time, unit, samplerate):
+    
+    samplerate = int(samplerate)
+    
+    if unit == "s":
+        return int(samplerate * time)
+    elif unit == "ms":
+        return int(samplerate * (time/1000))
+    else:
+        raise NotImplementedError() 
+        return None
+    
 #%% Auswertung
 for file in os.listdir(folder):
-    filename,ext=os.path.splitext(file)  
-    if ext=='' or ext=='pkl':
-        print('image or classdata')
+    filename, ext=os.path.splitext(file)  
+    
+    #Skip all files that arent txt.
+    if not ext == ".txt":
         continue
-    
-    
-    try:    
-        colnamesmfli = ['Time [s]', 'Vout [V]']
-        data = pd.read_csv(folder+'\\'+file, comment='%', sep='; ', names=colnamesmfli).values
             
-        try:
-            t=data[0:,0]
-            vout=data[0:,1]
-            vin=np.ones(len(t))
-            I=vout/resistance
-            I=I-I[0]
-        except TypeError:
-            t=data[0:,0]
-            vout=data[0:,1]
-            for i in range(0,len(vout)):
-                vout[i]=vout[i][0:-1]
-                vout[i]=float(vout[i])
-            vin=np.ones(len(t))
-            I=vout/resistance
-            I=I-I[0]
-        dt=t[1]-t[0]    
-        lastidx=0
-    except (UnicodeDecodeError):
-        print('Unicodeerror')
-        continue
-    
-        
     try:    
-        colnamesmfli = ['Time [s]', 'Vout [V]', 'Current [A]']
-        data = pd.read_csv(folder+'\\'+file, comment='%', sep=';', names=colnamesmfli).values
-            
-        t=data[0:,0]
-        vout=data[0:,1]
-        vin=data[0:,2]
-        vin=np.ones(len(t))
-        I=vout/resistance
-        dt=t[1]-t[0]
+           
+        t, vout, vin = read_data(folder + '\\' + file)
+        I = vout / resistance
+        dt = t[1] - t[0]
 
-    
-    except (UnicodeDecodeError):
+    except UnicodeDecodeError as ude:
+        print(ude)
         continue
-#%% slice up the different parts of the measurement
+    
+# %% slice up the different parts of the measurement
     # if k!=1:
     #     k=k+1
     #     continue
     # else:
     k=k+1
 #%%
-    if plotoriginal==True:    
-        plt.plot(t,I*1000,label=k-1)
+    if plotoriginal:
+        plt.plot(t, I * 1000, label=str(k-1))
         # plt.plot(tcut,Icut*1000)
         # plt.plot(t,fit(tcut)*1000,label='derivative from fit')
+        
         plt.xlabel('time [s]')
         plt.ylabel('current [mA]')
         plt.legend()
+        plt.title("Measured Data")
         plt.show()
-        #%%
-    #this is to choose the right width over which is analyzed, typically just where the switching peak is located and dependent on samplingrate
-    #in case of fitting this also set the degree of the polynomial
-    while True:
-        if 1/dt < 4000:        
-            length=lengthright=lengthleft=50  #3.66kHz
-            break
-        elif 1/dt <8000:
-            length=lengthright=lengthleft=4000#7.32kHz
-            break
-        elif 1/dt < 15000 :
-            length=lengthright=lengthleft=7000   #14.64kHz
-            break
-        elif 1/dt < 30000 :
-            length=lengthright=1500  #29.3kHz
-            lengthleft=1500
-            break
-        elif 1/dt < 60000 :
-            length=lengthright=6000  #29.3kHz
-            lengthleft=6000
-            break
-        elif 1/dt < 120000 :
-            length=lengthright=1500  #29.3kHz
-            lengthleft=1500
-            break
-        elif 1/dt < 240000 :
-            length=lengthright=3000  #29.3kHz
-            lengthleft=3000
-            break
-        else:
-            lengthleft=1400
-            addition=0
-            lengthright=1600#938kHz
-            break
         
-    peakidx=find_peaks(np.abs(I),height=max(np.abs(I)/5),distance=(lengthright+lengthleft))[0]
-    if plotoriginal==True:
-        plt.plot(t,np.abs(I))
-        plt.plot([min(t),max(t)],np.ones(2)*[max(np.abs(I)/5)])
+    
+    lengthright = lengthleft = time_to_samples(0.8, "ms", 1/dt)
+
+
+#%%
+
+    peakidx=find_peaks(np.abs(I), height=max(np.abs(I)/5), distance=(lengthright+lengthleft))[0]
+    
+    if plotoriginal:
+        plt.plot(t, np.abs(I))
+        plt.hlines(max(np.abs(I / 5)), min(t), max(t),color="orange")
         plt.scatter(t[peakidx],np.abs(I[peakidx]),color='r')
+        plt.title("FIG 2")
         plt.show()
+    
     
     var=0   #variable to select certain maybe interesting cases put in a legend to find said cases and make settings below to fit     
     for  idxext in peakidx:  
         var = var+1
-        # if var!=0:
-        #     var=var+1
-        #     continue
-        # else:
-        #     var=var+1 
-            
-#%% make the polynomial fit
+
+        # make the polynomial fit
+
         shift=0
             
         idxext=idxext+shift
@@ -306,67 +284,59 @@ for file in os.listdir(folder):
         elif len(t)-idxext<lengthright:
             continue
         
-        
         else:
             tcut,Icut=t[idxext-lengthleft:idxext+lengthright],I[idxext-lengthleft:idxext+lengthright]
-            # tcut = list(tcut)
-            # Icut = list(Icut)
-        
-        check=0
-        while check==0:
+           
+       
+        check = 0
+        while check == 0:
 
-#%% slice up the different parts of the measurement
+            # slice up the different parts of the measurement
         
-            if plotoriginal==True:    
+            if plotoriginal:
                 # plt.plot(t,I*1000)
-                plt.plot(tcut,Icut*1000,label=[var-1,k-1])
+                plt.plot(tcut, Icut*1000, label=str([var-1, k-1]))
                 # plt.plot(t,fit(tcut)*1000,label='derivative from fit')
                 plt.xlabel('time [s]')
                 plt.ylabel('current [mA]')
+                plt.title("FIG 3")
                 plt.legend()
                 plt.show()
             
-            if split==True and var==1:
+            if split and var==1:
                 Icutsave=Icut
                 tcutsave=tcut
                 tcut,Icut=tcutsave[0:2*lengthleft+addition],Icutsave[0:2*lengthleft+addition]
-            if split==True and var==2:
+            if split and var==2:
                 tcut,Icut=tcutsave[2*lengthleft+addition:],Icutsave[2*lengthleft+addition:]
                 check=1
-            
-            if split==False:
+            if not split:
                 check=2
                             
                     
-                
     # %% analysis: calculate derivative for each point and with polynomial fit calculates fit derivative 
     #              to subtract as welll as a baseline from minima to prevent negative values for the squared slew rate difference 
             
+        
             dI=np.array([])
             dt=t[1]-t[0]
-            dFit=np.array([])       
-            for i in range(0,len(Icut[0:])-1):
-                dI=np.append(dI,(Icut[i+1]-Icut[i]))
-                # dFit=np.append(dFit,(fit(tcut)[i+1]-fit(tcut)[i]))
-                # dFit=np.append(dFit,(skewed_normal(tcut[i+1],*popt)-skewed_normal(tcut[i],*popt)))
+            
+            dFit=np.array([])
+            
+            for i in range(0, len(Icut[0:]) - 1):
+                dI = np.append(dI, (Icut[i+1] - Icut[i]) )
                 
             Jerkspectrum=(dI/dt)
             Jerkspectrum= np.append(Jerkspectrum,0) 
-            # Jerksandbase=np.abs(Jerkspectrum)
             Jerksandbase=Jerkspectrum**2
-            
-            # Fitspectrum=(dFit/dt)
-            # Fitspectrum=np.append(Fitspectrum,0)
-            # Fitbase=Fitspectrum**2
-            # Fitbase=np.abs(Fitspectrum)
-            
+              
             jerksminusfit=Jerksandbase#-Fitbase
             
             minlist=[]
             timelist=[]
             
             #remove baseline made from local minima can be set to either only take negative minima for baseline or everything 
-            for l in range(0,len(jerksminusfit)):
+            for l in range(0, len(jerksminusfit)):
                  if l==0:
                      if jerksminusfit[l]<jerksminusfit[l+1]:# and jerksminusfit[l]<0:
                          minlist.append(jerksminusfit[l])
@@ -392,8 +362,8 @@ for file in os.listdir(folder):
     #%%     filter out the data that is below a certain limit that was initially set
             filtered=[]
             # upperlimit=1
-            for j in range(0,len(jerks)):
-                if jerks[j]<upperlimit:
+            for j in range(0, len(jerks)):
+                if jerks[j] < upperlimit:
                 # if Jerks[j]<2e-14:
                     filtered.append(0)
                 else:
@@ -401,23 +371,27 @@ for file in os.listdir(folder):
     # %%     
             # plot the data to see slew rates over time compared to the current response
             if plot==True:
-                fig, ax1 = plt.subplots()
-                ax1.plot(tcut,Icut,label=var-1)
+                ax1 = plt.gca()
+                ax1.plot(tcut, Icut, label=str(var-1))
                 ax1.set_ylabel('current [A]',color='blue')
                 ax1.set_xlabel('time[s]')
                 ax2=ax1.twinx()
-                ax2.plot(tcut,filtered,c='r')
+                ax2.plot(tcut, filtered, c='r')
                 ax2.set_ylabel(r'slew rate $[\frac{A^2}{s^2}]$',c='r')
                 ax2.grid(False)
                 plt.legend()
+                plt.title("Data over Thershold")
                 plt.show()
+                
                 #%% show where in the measurement is being analyzed
                 plt.plot(t,I,c='r',label='')
                 plt.plot(tcut,Icut,c='g',label='')
                 plt.xlabel('time [t]')
                 plt.ylabel('current [A]')
+                plt.title("Section of Data")
                 plt.legend()
                 plt.show()
+                
     # %%    identify the jerks where they breach the threshold and calculate the corresponding values that are to be analyzed
             #the indizes within the cutlist are saved
             indexlist=[]
@@ -471,34 +445,28 @@ if ploteventdists==True:
     plt.scatter(np.linspace(0,len(waitlist),len(waitlist)),waitlist)
     plt.ylabel('Interevent time')
     plt.show()
+    
+    
 # %% 
 #%% make class object
-avg=7e-5 #not used anymore but here for functionality of the class saving mechanism
+avg=5e-4 #not used anymore but here for functionality of the class saving mechanism
+
+### FIXME: maxlist,sizelist is [] aka. empty!
+
 barkdatameas=Barkhausen_data(maxlist, sizelist, upperlimit, avg, folder)
+
 #%%
 barkdatameas.bins_hist()
 # barkdatameas.Linexponent(1e-2,1e2)
 #%%
-barkdatameas.plot_data(MLFit=True,MLmin=True,MLxmin=1e-12,LinFit=True,xmin=1e-2,xmax=1e0)
-# barkdatameas.Linexponent(1e-2,1e1)
-# barkdatameas.plot_data(MLFit=True,LinFit=True,xmin=1e-2,xmax=1e1)
-# barkdatameas.plot_data(LinFit=True,xmin=1e-10,xmax=1e-6)
-# %% used to load data saved from the class object and compare different datasets
-# barkdata1=load_bark(r'\\heivol-i.ad.uni-heidelberg.de\cam\Research\Groups\AG_Kemerink\Group Members\Seiler, Toni\Thesis data\barkhausen part\30V big deviation\backup\30V big deviation.pkl')
-# barkdata2=load_bark(r'\\heivol-i.ad.uni-heidelberg.de\cam\Research\Groups\AG_Kemerink\Group Members\Seiler, Toni\barkhausen measurements\folder to save data for exponents settings etc\30V big deviation.pkl')
-# barkdata3=load_bark(r'\\heivol-i.ad.uni-heidelberg.de\cam\Research\Groups\AG_Kemerink\Group Members\Seiler, Toni\barkhausen measurements\folder to save data for exponents settings etc\30V big deviation shift=500.pkl')
-# barkdata4=load_bark(r'\\heivol-i.ad.uni-heidelberg.de\cam\Research\Groups\AG_Kemerink\Group Members\Seiler, Toni\barkhausen measurements\folder to save data for exponents settings etc\30V shift=600.pkl')
-# barkdata5=load_bark(r'\\heivol-i.ad.uni-heidelberg.de\cam\Research\Groups\AG_Kemerink\Group Members\Seiler, Toni\barkhausen measurements\folder to save data for exponents settings etc\30V shift=2000.pkl')
-# plot_datasets([barkdatameas,barkdata1,barkdata2,barkdata3,barkdata4])
 
-#%% save the data
-# if shift==0:
-#     barkdatameas.save(overwrite=False)
-# if shift!=0:
-#     barkdatameas.save(name='shift='+str(shift))
+barkdatameas.plot_data(MLFit=True, MLmin=True, MLxmin=1e-12, LinFit=True, xmin=1e-2, xmax=1e0)
+
 
 # %% analysis without using the class
-analyze(barkdatameas.sizes,xmin=1e-2,xmax=1e1,binnumber=50)
+
+
+analyze(barkdatameas.sizes, xmin=1e-2, xmax=1e1, binnumber=50)
 #%% Maximum likelihood method exponents for the different minimum settings maximum boundary can be set as xmax but takes very long
 fit=powerlaw.Fit(maxlist)
 plt.plot(fit.xmins,fit.alphas,marker='.',linewidth=0)
@@ -508,6 +476,7 @@ plt.show()
 #simpler variant that is possible  after a fit without fixed minimum and fit.alphas with all points from the list
 explist=[]
 sigmalist=[]
+
 minlist=np.logspace(np.log10(min(maxlist)),np.log10(max(maxlist)/6),100)
 for xmin in minlist:
     fit=powerlaw.Fit(maxlist,xmin=xmin)
@@ -515,6 +484,7 @@ for xmin in minlist:
     sigmalist.append(fit.sigma)
 fit=powerlaw.Fit(sizelist)
 plt.errorbar(minlist,explist,sigmalist,elinewidth=0.3,barsabove=True,color='b')
+
 plt.hlines(fit.alpha,min(maxlist),max(maxlist)/6,color='red',label='exponent')
 plt.hlines(fit.alpha+fit.sigma,min(maxlist),max(maxlist)/6,color='green',label='standard deviation')
 plt.hlines(fit.alpha-fit.sigma,min(maxlist),max(maxlist)/6,color='green')
