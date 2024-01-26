@@ -35,7 +35,7 @@ def plot_datasets(objects,nrofbins=50):
     plt.show()
 
 class Barkhausen_data:
-    def __init__(self,eventsize,eventenergy,threshold,findmaxavg,folder):
+    def __init__(self, eventsize, eventenergy, threshold, findmaxavg, folder):
         self.sizes=eventsize
         self.energies=eventenergy
         self.threshold=threshold
@@ -121,7 +121,7 @@ class Barkhausen_data:
         bin_centers=bin_centers[hist!=0]
         hist=hist[hist!=0]
 
-        popt,pcov=curve_fit(lin_fit,np.log(bin_centers),np.log(hist))
+        popt, pcov=curve_fit(lin_fit,np.log(bin_centers),np.log(hist))
         
         exponent=popt[0]
         error=np.sqrt(pcov[0][0])
