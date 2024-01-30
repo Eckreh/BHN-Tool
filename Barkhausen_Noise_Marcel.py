@@ -11,12 +11,12 @@ import pandas as pd
 import scipy
 import os
 import powerlaw
-
+import helper_functions as hp
 
 
 # %% Parameters
 # Datafolder
-folder = r'Z:\Group Members\Hecker, Marcel\240125_Measurement\Voltage\B3_1 PUND 100Hz 3.75M 2.9Vpp'
+folder = r"Z:\Group Members\Hecker, Marcel\240129_Measurement\B3_1 ss 3.0Vpp 100Hz PUND\1. 60 MHz"
 #folder = r"Z:\Group Members\Seiler, Toni\archive\measurement data shown in thesis\the ramped measurements\measurements that did show events\29.3kHz"
 
 resistance = 50 #Ohm
@@ -27,20 +27,6 @@ smooth_data = True
  
 
 # %% Functions
-def read_data(filepath):
-    
-    colnamesmfli = ['Time [s]', 'Ch1 [V]', 'Ch2 [V]']
-    data = pd.read_csv(filepath, comment='%', sep=';', names=colnamesmfli).values
-    
-    t = data[0:, 0]
-    ch1 = data[0:, 1]
-    ch2 = np.zeros(len(t))
-    
-    if not np.isnan(data[0, 2]):
-        ch2 = data[0:, 2]
-
-    return t, ch1, ch2
-
 
 def calculate_peak_width(data_x, data_y, percentage):
     
@@ -49,7 +35,6 @@ def calculate_peak_width(data_x, data_y, percentage):
     peak_index = np.argmax(data_y)
     
     height = data_y[peak_index]*percentage
-    
     left_idx = np.argmin(np.abs(data_y[:peak_index] - height))
     right_idx = np.argmin(np.abs(data_y[peak_index:] - height)) + peak_index
     
@@ -66,10 +51,10 @@ def calculate_peak_width(data_x, data_y, percentage):
     #return left_idx, right_idx, width
 
 
-def calculate_derivative(data_x, data_y, order="second"):
+def calculate_derivative(data_x, data_y, dtype="simple"):
     
     
-    if order == "first":
+    if dtype == "simple":
         
         # f'(x) = (f(x+h)-f(x))/h
         
@@ -83,36 +68,26 @@ def calculate_derivative(data_x, data_y, order="second"):
         
         return data_yp
         
-    elif order == "second":
-        ### TODO: this looks broken!
-        # f'(x) = (f(x + h) - 2 * f(x) + f(x - h)) / (h ** 2)
+    elif dtype == "five-point":
+       
         data_yp = np.zeros_like(data_y)
         
         for i, f in enumerate(data_y):
-            if i > 0 and i < len(data_y)-1:
+            if i > 4 and i < len(data_y)-4:
                 dt = data_x[i+1]-data_x[i]
-                data_yp[i] = (data_y[i+1] - 2*f + data_y[i-1]) / dt**2
+                
+                data_yp[i] = (data_y[i-2]-8*data_y[i-1]+8*data_y[i+1]-data_y[i+2])/(12*dt)
         
         return data_yp
-
-
-def time_to_samples(time, unit, samplerate):
     
-    samplerate = int(samplerate)
-    
-    if unit == "s":
-        return int(samplerate * time)
-    elif unit == "ms":
-        return int(samplerate * (time/1000))
     else:
-        raise NotImplementedError() 
-        return None    
-  
-    
+        raise NotImplementedError()
+        return None
+
 def lin_fit(x, a, b):
     return a*x + b
 
-def analyze(data, xmin, xmax, binnumber, datatype='eventsize'):
+def analyze(data, xmin, xmax, binnumber, datatype='eventsize', folder ='.\\'):
     params = {'axes.labelsize': 22,'axes.titlesize':26,  'legend.fontsize': 20, 'legend.frameon': True, 'xtick.labelsize': 18, 'ytick.labelsize': 18}
     plt.rcParams.update(params)
     
@@ -162,6 +137,7 @@ def analyze(data, xmin, xmax, binnumber, datatype='eventsize'):
     plt.ylabel(r'probability P($S=S_i$)',fontsize=18)
     plt.legend(fontsize=18)
     # plt.grid(True)
+    plt.savefig(folder + "\\powerlaw.png")
     plt.show()
     startvalue=xmin
 
@@ -182,18 +158,43 @@ for file in os.listdir(folder):
             
     try:    
            
-        t, ch1, ch2 = read_data(folder + '\\' + file)
-        current = ch1 / resistance
+        t, ch1, ch2, colnames = hp.read_data(folder + '\\' + file)
+    
+        if "(V)" in colnames[1]:
+            current = ch1 / resistance
+        elif "(A)" in colnames[1]:
+            current = ch1
+        else:
+            print("THIS Broken")
+        
         dt = t[1] - t[0]
 
     except UnicodeDecodeError as ude:
         print(ude)
         continue
     
-     
+    
+    if len(colnames) == 3:
+        
+        st = hp.SchmittTrigger(0.007, 0.001)
+        plt.plot(t, ch2)
+        
+        trigger = [st.process_input(abs(x)) for x in ch2]
+        trigger2 = hp.preplace_ones(trigger, hp.time_to_samples(20, "us", 1/dt))
+        
+        t_slice = hp.slice_array(t, trigger2)
+        ch1_slice = hp.slice_array(ch1, trigger2)
+        
+        prob_index = hp.closest_to_zero_index(t_slice)
+        
+        plt.plot(t_slice[prob_index], ch1_slice[prob_index])
+    
+    
+    
+    
     # Smooth Data
     if smooth_data:
-        sos = scipy.signal.butter(2, 5E4, 'lowpass', fs=1/dt, output='sos')
+        sos = scipy.signal.butter(2, 0.025, 'lowpass', output='sos')
         smooth_current = scipy.signal.sosfiltfilt(sos, current)
         left_idx, right_idx, _ = calculate_peak_width(t, smooth_current, 0.9)
     else:
@@ -208,10 +209,10 @@ for file in os.listdir(folder):
         
         if smooth_data:
             plt.plot(t, smooth_current)
-            
+        
+        plt.savefig(folder+"\\data_" + filename.replace('.txt','.png'))
         plt.show()
         
-    
     # Plot (d/dt)
     if True:
         fig, ax1 = plt.subplots()
@@ -328,9 +329,9 @@ for file in os.listdir(folder):
             indexlist.append(j)
     
 
-analyze(maxlist, xmin=2e0, xmax=30e2, binnumber=50)
+analyze(maxlist, xmin=5e-1, xmax=2e1, binnumber=50, folder=folder)
     
 
-print("Exit")
+print("DONE!")
    
 
