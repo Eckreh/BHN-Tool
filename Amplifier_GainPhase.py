@@ -11,27 +11,18 @@ import pandas as pd
 import scipy
 import os
 import powerlaw
+import helper_functions as hp
+
 
 folder = r"Z:\Group Members\Hecker, Marcel\240124_Measurement_Amplifier\MFIA 20x 250mV"
 
 def sine(t, A, omega, phi):
     return A * np.sin(omega * t + phi)
 
-def read_data(filepath):
 
-    colnamesmfli = ['Time [s]', 'Ch1 [V]', 'Ch2 [V]']
-    data = pd.read_csv(filepath, comment='%', sep=';',
-                       names=colnamesmfli).values
-
-    t = data[0:, 0]
-    ch1 = data[0:, 1]
-    ch2 = np.zeros(len(t))
-
-    if not np.isnan(data[0, 2]):
-        ch2 = data[0:, 2]
-
-    return t, ch1, ch2
-
+def absH(omega, omega_c, gain):
+    omega = np.asarray(omega)
+    return gain / np.sqrt(1 + (omega / omega_c)**2)
 
 freqs = []
 gain = []
@@ -45,7 +36,7 @@ for file in os.listdir(folder):
         continue
 
     try:
-        t, ch1, ch2 = read_data(folder + '\\' + file)
+        t, ch1, ch2, colnames = hp.read_data(folder + '\\' + file)
         dt = t[1] - t[0]
 
       
@@ -70,17 +61,18 @@ for file in os.listdir(folder):
         phase.append(popt1[2]-popt2[2])
         
         
-        plt.plot(t, ch1)
-        plt.plot(t, ch2)
+        #plt.plot(t, ch1)
+        #plt.plot(t, ch2)
         
-        plt.plot(tlin, sine(tlin, *popt1))
-        plt.plot(tlin, sine(tlin, *popt2))
+        #plt.plot(tlin, sine(tlin, *popt1))
+        #plt.plot(tlin, sine(tlin, *popt2))
         
-        plt.xlim(-(1/popt1[1] * 5),(1/popt1[1] * 5))
-        plt.show()
+        #plt.xlim(-(1/popt1[1] * 5),(1/popt1[1] * 5))
+        #plt.show()
         print(file)
-        print(popt2[2]-popt1[2])
-        
+        dpopt2 = popt2[2]-popt1[2]
+        dpopt2 = (dpopt2 + np.pi) % (2*np.pi) - np.pi
+        print(dpopt2, np.degrees(dpopt2))
         
         
         #plt.plot(frequencies, fft_result) 
@@ -93,15 +85,24 @@ for file in os.listdir(folder):
     
 
 phase = np.asarray(phase)
- 
+freqs = np.asarray(freqs)
+gain = np.asarray(gain)
+
+linfreq = np.linspace(np.min(freqs), np.max(freqs), 10000)
+popt, pcov = scipy.optimize.curve_fit(absH, freqs[freqs<1E6], gain[freqs<1E6])
+
+plt.plot(linfreq, 20*np.log10(absH(linfreq, *popt)))
 plt.errorbar(freqs, 20*np.log10(gain), fmt='x')
+
+plt.text(1E3, 20, 'f_c = {:.2e}'.format(popt[0]), fontsize=12, color='blue')
+
 plt.xscale('log')
 plt.ylabel("Gain [dB]")
 plt.xlabel("Frequency [Hz]")
 plt.ylim((0,30))
 plt.show()
 
-phase = np.where(phase<0 , 2*np.pi+phase, phase)
+phase = (phase + np.pi) % (2*np.pi) - np.pi
 
 plt.errorbar(freqs, np.degrees(phase), fmt='x')
 plt.xscale('log')
