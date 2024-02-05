@@ -249,50 +249,23 @@ for file in os.listdir(folder):
     
 # %% Copy from Toni
     
-    Jerksandbase = calculate_derivative(t, current, "first")**2
-    jerksminusfit=Jerksandbase
+    jerksandbase = calculate_derivative(t, current, "simple")**2
     
-    #plt.plot(t, current, label="cut to peak 10%")
-    
-    minlist=[]
-    timelist=[]
-    
-    #remove baseline made from local minima can be set to either only take negative minima for baseline or everything 
-    for l in range(0, len(jerksminusfit)):
-        
-         if l == 0:
-             if jerksminusfit[l]<jerksminusfit[l+1]:
-                 minlist.append(jerksminusfit[l])
-                 timelist.append(t[l])
-     
-         elif l == len(jerksminusfit)-1:
-             if jerksminusfit[l]<jerksminusfit[l-1]:
-                 minlist.append(jerksminusfit[l])
-                 timelist.append(t[l])
-     
-         elif l > 0 and l < len(jerksminusfit)-1:
-             if jerksminusfit[l] < jerksminusfit[l-1] and jerksminusfit[l] < jerksminusfit[l+1]:
-                 minlist.append(jerksminusfit[l])
-                 timelist.append(t[l])
+    baseline = hp.interpolate_baseline(t, jerksandbase)
 
-
-    baseline = scipy.interpolate.pchip_interpolate(timelist, minlist, t)
-    jerks=jerksminusfit-baseline
+    jerks=jerksandbase-baseline
+    
+    plt.plot(t, jerksandbase)
+    plt.plot(t, baseline)
+    plt.show()
+    
     
     filtered = np.copy(jerks)
-    filtered[filtered < threshold] = 0
+    filtered[filtered < threshold] = 0 
     
-    
-    #plt.plot(t, Jerksandbase)
-    #plt.plot(timelist, minlist)
-    #plt.plot(t, baseline)
-    #plt.plot(t, jerks)
-    #plt.plot(t, filtered, label="filtered, cut of: " + str(threshold))
-    #plt.plot()
-    #plt.legend()
-    #plt.show()
-    
-    
+    plt.plot(t, jerks)
+    plt.plot(t, filtered)
+    plt.show()
     
 # %%        More Copy from Toni    
 #           identify the jerks where they breach the threshold and calculate the corresponding values that are to be analyzed

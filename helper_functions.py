@@ -6,6 +6,7 @@ Created on Mon Jan 29 16:45:11 2024
 """
 
 import pandas as pd
+import scipy
 import numpy as np
 import copy
 
@@ -79,12 +80,13 @@ def time_to_samples(time, unit, samplerate):
     if unit == "s":
         return int(samplerate * time)
     elif unit == "ms":
-        return int(samplerate * (time  / 1000))
+        return int(samplerate * (time / 1000))
     elif unit == "us":
         return int(samplerate * (time / 1E6))
     else:
         raise NotImplementedError()
         return None
+
 
 def closest_to_zero_index(arrays):
     min_abs_val = float('inf')
@@ -98,6 +100,49 @@ def closest_to_zero_index(arrays):
 
     return closest_index
 
+
+def combine_points(array):
+    combined_array = []
+    i = 0
+    while i < len(array):
+        # If there's an odd number of elements left, just append the last one
+        if i == len(array) - 1:
+            combined_array.append(array[i])
+        else:
+            # Combine two adjacent points (e.g., by averaging)
+            combined_value = (array[i] + array[i + 1]) / 2.0
+            combined_array.append(combined_value)
+        i += 2  # Move to the next pair of points
+    return combined_array
+
+
+def interpolate_baseline(data_x, data_y, threshold=0):
+    minlist=[]
+    timelist=[]
+    
+    #remove baseline made from local minima can be set to either only take negative minima for baseline or everything 
+    for l in range(0, len(data_y)):
+        
+         if l == 0:
+             if data_y[l]<data_y[l+1]:
+                 minlist.append(data_y[l])
+                 timelist.append(data_x[l])
+     
+         elif l == len(data_y)-1:
+             if data_y[l]<data_y[l-1]:
+                 minlist.append(data_y[l])
+                 timelist.append(data_x[l])
+     
+         elif l > 0 and l < len(data_y)-1:
+             if data_y[l] < data_y[l-1] and data_y[l] < data_y[l+1]:
+                 minlist.append(data_y[l])
+                 timelist.append(data_x[l])
+    
+    baseline = scipy.interpolate.pchip_interpolate(timelist, minlist, data_x)
+    
+    return baseline
+    
+    
 
 class SchmittTrigger:
 
