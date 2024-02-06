@@ -7,6 +7,7 @@ import warnings
 import numpy as np
 import zhinst.utils
 import matplotlib.pyplot as plt
+from matplotlib import cm
 
 
 
@@ -145,27 +146,26 @@ scopeModule.set("mode", 1) # TODO: Check this!
 scopeModule.set("averager/weight", 1)
 scopeModule.set("historylength", 50)
 
-daq.setInt('/dev3258/scopes/0/trigchannel', input2) # input2 as trigger
-daq.setInt('/dev3258/scopes/0/trigslope', 1) # Rising Edge
-daq.setDouble('/dev3258/scopes/0/triglevel', 0.05000000) # 50mV
+daq.setInt("/%s/scopes/0/trigchannel" % device, input2) # input2 as trigger
+daq.setInt("/%s/scopes/0/trigslope" % device, 1) # Rising Edge
+daq.setDouble("/%s/scopes/0/triglevel" % device, 0.05000000) # 50mV
 daq.setDouble("/%s/scopes/0/trighysteresis/mode" % device, 0)
-daq.setDouble('/dev3258/scopes/0/trighysteresis/absolute', 0.00500000) # 5mV hyst
-daq.setInt('/dev3258/scopes/0/trigenable', 1) # enable trigger
+daq.setDouble("/%s/scopes/0/trighysteresis/absolute" % device, 0.00500000) # 5mV hyst
+daq.setInt("/%s/scopes/0/trigenable" % device, 1) # enable trigger
 daq.setInt("/%s/scopes/0/triggate/enable" % device, 0)
-daq.setDouble('/dev3258/scopes/0/trigreference', 0.50000000)
+daq.setDouble("/%s/scopes/0/trigreference" % device, 0.50000000)
 
 daq.sync()
 
-
 wave_nodepath = f"/{device}/scopes/0/wave"
 scopeModule.subscribe(wave_nodepath)
-
 
 data_with_trig = get_scope_records(device, daq, scopeModule, 50)
 
 assert (
     wave_nodepath in data_with_trig
 ), f"The Scope Module did not return data for {wave_nodepath}."
+
 print(
     f"Number of scope records returned with triggering enabled: \
         {len(data_with_trig[wave_nodepath])}."
@@ -173,8 +173,46 @@ print(
     
 check_scope_record_flags(data_with_trig[wave_nodepath])
 
-    
+
+if True:
+
+    # Get the instrument's ADC sampling rate.
+    clockbase = daq.getInt(f"/{device}/clockbase")
+
+    def plot_scope_records(axis, scope_records, scope_input_channel, scope_time=0):
+        """
+        Helper function to plot scope records.
+        """
+        colors = [
+            cm.Blues(np.linspace(0, 1, len(scope_records))),
+            cm.Greens(np.linspace(0, 1, len(scope_records))),
+        ]
+        for index, record in enumerate(scope_records):
+            totalsamples = record[0]["totalsamples"]
+            wave = record[0]["wave"][scope_input_channel, :]
+
+            if not record[0]["channelmath"][scope_input_channel] & 2:
+                # We're in time mode: Create a time array relative to the trigger time.
+                dt = record[0]["dt"]
+                # The timestamp is the timestamp of the last sample in the scope segment.
+                timestamp = record[0]["timestamp"]
+                triggertimestamp = record[0]["triggertimestamp"]
+                t = np.arange(-totalsamples, 0) * dt + (timestamp - triggertimestamp) / float(clockbase)
+                axis.plot(1e6 * t, wave, color=colors[scope_input_channel][index])
+
+        axis.grid(True)
+        axis.set_ylabel("Amplitude [V]")
+        axis.autoscale(enable=True, axis="x", tight=True)
+
+    fig1, axis1 = plt.subplots()
+
+    # Plot the scope data with triggering enabled.
+    plot_scope_records(axis1, data_with_trig[wave_nodepath], 0)
+    plot_scope_records(axis1, data_with_trig[wave_nodepath], 1)
+    axis1.axvline(0.0, linewidth=2, linestyle="--", color="k", label="Trigger time")
+    axis1.set_title(f"{len(data_with_trig[wave_nodepath])} Scope records from 2 channels ({device}, triggering enabled)")
+    axis1.set_xlabel("t (relative to trigger) [us]")
+    fig1.show()
+
 
 print("end")
-
-
