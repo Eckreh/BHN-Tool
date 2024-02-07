@@ -116,6 +116,8 @@ zhinst.utils.api_server_version_check(daq)
 
 daq.setDebugLevel(3)
 
+
+# %% Scope setup
 zhinst.utils.disable_everything(daq, device)
 
 
@@ -124,19 +126,21 @@ rate = clockbase / 2**stream_rate
 
 daq.sync()
 
-daq.setInt("/%s/scopes/0/length" % device, 16384) # Length
-daq.setInt("/%s/scopes/0/channel" % device, 3) # 2Ch
+daq.setInt("/%s/scopes/0/length" % device, 16384)  # Length
+daq.setInt("/%s/scopes/0/channel" % device, 3)  # 2Ch
 
 daq.setInt("/%s/scopes/0/channels/*/bwlimit" % device, 1)
 
 daq.setInt("/%s/scopes/0/channels/0/inputselect" % device, input1)
 daq.setInt("/%s/scopes/0/channels/1/inputselect" % device, input2)
 
-daq.setInt("/%s/scopes/0/time" % device, stream_rate) # 938kHz
+daq.setInt("/%s/scopes/0/time" % device, stream_rate)  # 938kHz
 
-daq.setInt("/%s/scopes/0/single" % device, 0) # continuos
+daq.setInt("/%s/scopes/0/single" % device, 0)  # continuos
 
-daq.setInt("/%s/scopes/0/segments/enable" % device, 0) # no segments
+daq.setInt("/%s/scopes/0/segments/enable" % device, 0)  # no segments
+
+# daq.setDouble('/dev3258/currins/0/range', 0.00000001)  # <- !10nA! CurrenInput Scale Maybe use auto lateron
 
 daq.sync()
 
@@ -148,15 +152,18 @@ scopeModule.set("historylength", 50)
 
 daq.setInt("/%s/scopes/0/trigchannel" % device, input2) # input2 as trigger
 daq.setInt("/%s/scopes/0/trigslope" % device, 1) # Rising Edge
-daq.setDouble("/%s/scopes/0/triglevel" % device, 0.05000000) # 50mV
+daq.setDouble("/%s/scopes/0/triglevel" % device, 0.10000000) # 100mV
 daq.setDouble("/%s/scopes/0/trighysteresis/mode" % device, 0)
-daq.setDouble("/%s/scopes/0/trighysteresis/absolute" % device, 0.00500000) # 5mV hyst
+daq.setDouble("/%s/scopes/0/trighysteresis/absolute" % device, 0.02000000) # 20mV hyst
 daq.setInt("/%s/scopes/0/trigenable" % device, 1) # enable trigger
+
 daq.setInt("/%s/scopes/0/triggate/enable" % device, 0)
 daq.setDouble("/%s/scopes/0/trigreference" % device, 0.50000000)
 
 daq.sync()
 
+
+# %% Programm
 wave_nodepath = f"/{device}/scopes/0/wave"
 scopeModule.subscribe(wave_nodepath)
 
