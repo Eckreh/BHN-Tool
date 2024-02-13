@@ -73,6 +73,26 @@ def preplace_ones(arr, num_ones):
     return arr_copy
 
 
+def reduce_ones(array, n):
+    arr_copy = copy.deepcopy(array)
+
+    i = 0
+    while i < len(arr_copy):
+        if arr_copy[i] == 1:
+            # Find the end of the current block of 1s
+            j = i
+            while j < len(arr_copy) and arr_copy[j] == 1:
+                j += 1
+            # Replace the last 'n' 1s at the end of the block with 0s
+            for k in range(j - n, j):
+                if k >= 0:
+                    arr_copy[k] = 0
+            i = j  # Move the index to the end of the block of 1s
+        else:
+            i += 1  # Move the index forward by 1 if the element is 0
+    return arr_copy
+
+
 def time_to_samples(time, unit, samplerate):
 
     samplerate = int(samplerate)
