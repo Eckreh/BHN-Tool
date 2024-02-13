@@ -2,3 +2,4 @@ data to test programs/
 __pycache__/
 venv/
 *.npy
+*.npz
