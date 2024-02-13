@@ -121,6 +121,21 @@ def closest_to_zero_index(arrays):
     return closest_index
 
 
+def closest_key(dictionary, value):
+    closest_key = None
+    min_difference = float('inf')  # Initialize with infinity
+
+    for key, nums in dictionary.items():
+        if isinstance(nums, list):
+            for num in nums:
+                difference = abs(num - value)
+                if difference < min_difference:
+                    min_difference = difference
+                    closest_key = key
+
+    return closest_key
+
+
 def combine_points(array):
     combined_array = []
     i = 0
@@ -161,8 +176,53 @@ def interpolate_baseline(data_x, data_y, threshold=0):
     baseline = scipy.interpolate.pchip_interpolate(timelist, minlist, data_x)
     
     return baseline
+
+
+def concat_dict_array(existing_array, additional_array):
+    
+    for existing_dict, new_dict in zip(existing_array, additional_array):
+        
+        for key in new_dict.keys():
+        
+            if key in existing_dict.keys():
+                existing_dict[key] = np.concatenate((existing_dict[key], new_dict[key]))
+            else:
+                existing_dict[key] = new_dict[key]
+
+
+def calculate_derivative(data_x, data_y, dtype="simple"):
     
     
+    if dtype == "simple":
+        
+        # f'(x) = (f(x+h)-f(x))/h
+        
+        data_yp = np.zeros_like(data_y)
+        
+        
+        for i, f in enumerate(data_y):
+            if i > 0 and i < len(data_y)-1:
+                dt = data_x[i+1] - data_x[i]
+                data_yp[i] = (data_y[i+1] - f) / dt
+        
+        return data_yp
+        
+    elif dtype == "five-point":
+       
+        data_yp = np.zeros_like(data_y)
+        
+        for i, f in enumerate(data_y):
+            if i > 4 and i < len(data_y)-4:
+                dt = data_x[i+1]-data_x[i]
+                
+                data_yp[i] = (data_y[i-2]-8*data_y[i-1]+8*data_y[i+1]-data_y[i+2])/(12*dt)
+        
+        return data_yp
+    
+    else:
+        raise NotImplementedError()
+        return None
+
 
 class SchmittTrigger:
 
