@@ -262,6 +262,9 @@ def evaluate_scope_file_old(data, threasholds):
     Vdiv = 40
     
     filtered_peaks = []
+    discard_peaks = []
+    good_peaks = []
+    
     parameters = []
     
     avg_len = -1
@@ -319,15 +322,25 @@ def evaluate_scope_file_old(data, threasholds):
                 if pressed_key == " ":
                     print("KEEP:" + str(maxdb) + " " + str(diff*1E10) + " @ " + str(appV*Vdiv))
                     filtered_peaks.append([st, sch1])
+                    good_peaks.append([st-st[0], abs(np.asarray(sch1))])
                     
                     parameters.append({"Vapp": appV*Vdiv, "Vraw": appV, "threashold_spike": threashold_spike, "threashold_continus": threashold_continus, "samples_to_average": samples_to_average})
                 else:
+                    discard_peaks.append([st-st[0], abs(np.asarray(sch1))])
                     print("DISCARD:" + str(maxdb) + " " + str(diff*1E10) + " @ " + str(appV*Vdiv))
+            else:
+                discard_peaks.append([st-st[0],abs(np.asarray(sch1))])
                 
-                pressed_key = -1
-                
-                time.sleep(0.2)
-                    
+            pressed_key = -1
+            time.sleep(0.1)
+           
+    starttime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    
+    if len(filtered_peaks) > 0:
+              np.save("good" + starttime, hf.pad_arrays_to_4096(good_peaks))
+          
+    if len(discard_peaks) > 0:
+              np.save("bad" +  starttime, hf.pad_arrays_to_4096(discard_peaks))
     
     return filtered_peaks, parameters
 
@@ -417,7 +430,7 @@ def evaluate_scope_file(data, threasholds):
                         
                         
                     pressed_key = -1
-                    time.sleep(0.2)
+                    time.sleep(0.1)
                     
                 else:
                     discard_peaks.append([st-st[0],abs(np.asarray(sch1))])
@@ -426,7 +439,6 @@ def evaluate_scope_file(data, threasholds):
     starttime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     
     if len(filtered_peaks) > 0:
-        
         np.save("good" + starttime, hf.pad_arrays_to_4096(good_peaks))
     
     if len(discard_peaks) > 0:
@@ -476,7 +488,7 @@ def view_file_proc(data):
     
 
 # %% test 0
-folder = r"P:\Desktop\Experimental eval\data_scope\Older Data\B3_9 bs 2.6Vpp"
+folder = r"D:\Older PVDF Data\B3_9 bs 2.6Vpp"
 
 ar1 = []
 ar2 = []
@@ -528,8 +540,7 @@ print("exit")
 # %% test 1
 
 wave_nodepath = "/dev3258/scopes/0/wave" 
-
-folder = r"D:\Session 240215 BTA C10 N bs\post lunch"
+folder = r"D:\Session 240215 PVDF\1. 10V\shows events"
 
 
 plt.ion()
@@ -558,7 +569,7 @@ for file in os.listdir(folder):
     
     thresholdsBTAC10 = {16: [0.1, 0.30]}
     
-    a1, a2 = evaluate_scope_file(np.load(folder + '\\' + file, allow_pickle = True), thresholdsBTAC10)
+    a1, a2 = evaluate_scope_file(np.load(folder + '\\' + file, allow_pickle = True), thresholdsPVDF)
     
     #a1, a2 = evaluate_scope_file(np.load(folder + '\\' + file, allow_pickle = True), thresholds)
     
@@ -614,7 +625,6 @@ for x,y in arr1:
 print("exit")
 
 # %% testo
-
 
 numbers = [x["Vapp"] for x in arr2]
 groups = hf.group_numbers_within(numbers, 0.5, True)
@@ -678,7 +688,7 @@ plt.plot([x[0] for x in groups], alphas)
 
 
 # %% plot all files
-folder = r"D:\Session 250216 BTA C10 mm heated 343 K\\"
+folder = r"D:\Session 240215 PVDF\2. 15V\\"
 
 for file in os.listdir(folder):
     filename, ext = os.path.splitext(file)
