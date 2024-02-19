@@ -94,21 +94,23 @@ def reduce_ones(array, n):
 
 
 def pad_arrays_to_4096(arrays):
-    """
-    Pad each array within a multidimensional array to a length of 4096 using np.pad.
-    
-    Parameters:
-    - arrays: The input multidimensional array containing arrays to be padded.
-    
-    Returns:
-    - padded_arrays: The padded multidimensional array.
-    """
     padded_arrays = []
     
     for sub_array in arrays:
         padded_sub_array = []
         
-        for array in sub_array:
+        # Pad the timestamp array (first array) to 4096 with linear interpolation
+        timestamp_array = sub_array[0]
+        timestamp_length = len(timestamp_array)
+        if timestamp_length >= 4096:
+            padded_sub_array.append(timestamp_array[:4096])
+        else:
+            # Linearly interpolate to extend the timestamp array
+            extended_timestamp = np.linspace(timestamp_array[0], timestamp_array[-1], num=4096)
+            padded_sub_array.append(extended_timestamp)
+
+        # Pad other arrays with zeros
+        for array in sub_array[1:]:
             length = len(array)
             if length >= 4096:
                 padded_sub_array.append(array[:4096])
