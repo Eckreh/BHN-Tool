@@ -607,29 +607,8 @@ print("exit")
 # %% testo
 
 
-def group_numbers_within_factor(numbers, factor):
-    numbers_with_index = [(num, i) for i, num in enumerate(numbers)]
-    numbers_with_index.sort(key=lambda x: x[0])  # Sort based on numbers
-
-    groups = []
-    current_group = []
-
-    for num, index in numbers_with_index:
-        if not current_group or num <= current_group[-1][0] * (1+factor):
-            current_group.append((num, index))
-        else:
-            groups.append((current_group[0][0], [x[1] for x in current_group]))
-            current_group = [(num, index)]
-
-    # Add the last group
-    if current_group:
-        groups.append((current_group[0][0], [x[1] for x in current_group]))
-
-    return groups
-
-
 numbers = [x["Vapp"] for x in arr2]
-groups = group_numbers_within_factor(numbers, 0.01)
+groups = hf.group_numbers_within(numbers, 0.5, True)
 
 #print([item[0] for item in groups])
 

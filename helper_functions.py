@@ -253,6 +253,30 @@ def calculate_derivative(data_x, data_y, dtype="simple"):
         return None
 
 
+def group_numbers_within(numbers, diffrence, absolute=False):
+    
+    numbers_with_index = [(num, i) for i, num in enumerate(numbers)]
+    numbers_with_index.sort(key=lambda x: x[0])
+
+    groups = []
+    current_group = []
+
+    for num, index in numbers_with_index:
+        
+        maxval = current_group[-1][0] * (1+diffrence) if not absolute else current_group[-1][0] + diffrence
+        
+        if not current_group or num <= maxval:
+            current_group.append((num, index))
+        else:
+            groups.append((current_group[0][0], [x[1] for x in current_group]))
+            current_group = [(num, index)]
+
+    # Add the last group
+    if current_group:
+        groups.append((current_group[0][0], [x[1] for x in current_group]))
+
+    return groups
+
 class SchmittTrigger:
 
     def __init__(self, v_high, v_low):
