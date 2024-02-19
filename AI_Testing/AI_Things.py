@@ -13,8 +13,6 @@ from os import listdir
 from os.path import isfile, join
 import torch.nn as nn
 import torch.optim as optim
-from sklearn.model_selection import train_test_split
-
 
 def load_data(folder_path):
     
@@ -32,13 +30,18 @@ bad_data = load_data(bad_folder_path)
 
 np.random.shuffle(bad_data)
 
-bad_data = bad_data[:len(good_data)]
+print(len(good_data))
+
+if len(bad_data) > len(good_data):
+    bad_data = bad_data[:len(good_data)]
 
 
 # Sample data, replace this with your own data
 X = np.concatenate([good_data, bad_data], axis=0)
+y = np.asarray([1]*len(good_data)+[0]*len(bad_data), dtype="long")  # Labels
 
-y = np.asarray([1]*len(good_data)+[0]*len(bad_data), dtype="float")  # Labels
+
+X = X.reshape(X.shape[0], -1)
 
 X = torch.tensor(X, dtype=torch.float32)
 y = torch.tensor(y, dtype=torch.float32)
@@ -57,7 +60,7 @@ model = nn.Sequential(
     nn.ReLU(),
     nn.Linear(512, 128),
     nn.ReLU(),
-    nn.Linear(128, 2)
+    nn.Linear(128, 1)
 )
 
 
@@ -80,7 +83,7 @@ class LSTMModel(nn.Module):
 
         return output
 
-model = nn.LSTM(2, 512, num_layers=4, batch_first=True)
+#model = nn.LSTM(2, 512, num_layers=4, batch_first=True)
 
 # Define loss function and optimizer
 criterion = nn.BCELoss()
@@ -89,7 +92,7 @@ optimizer = optim.Adam(model.parameters(), lr=0.001)
 train_loader = DataLoader(train_data, batch_size=128, shuffle=True)
 
 # Training loop
-epochs = 20
+epochs = 200
 
 for epoch in range(epochs):
     for inputs, labels in train_loader:
