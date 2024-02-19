@@ -79,18 +79,47 @@ def reduce_ones(array, n):
     i = 0
     while i < len(arr_copy):
         if arr_copy[i] == 1:
-            # Find the end of the current block of 1s
             j = i
             while j < len(arr_copy) and arr_copy[j] == 1:
                 j += 1
-            # Replace the last 'n' 1s at the end of the block with 0s
+                
             for k in range(j - n, j):
                 if k >= 0:
                     arr_copy[k] = 0
-            i = j  # Move the index to the end of the block of 1s
+            i = j
         else:
-            i += 1  # Move the index forward by 1 if the element is 0
+            i += 1
+            
     return arr_copy
+
+
+def pad_arrays_to_4096(arrays):
+    """
+    Pad each array within a multidimensional array to a length of 4096 using np.pad.
+    
+    Parameters:
+    - arrays: The input multidimensional array containing arrays to be padded.
+    
+    Returns:
+    - padded_arrays: The padded multidimensional array.
+    """
+    padded_arrays = []
+    
+    for sub_array in arrays:
+        padded_sub_array = []
+        
+        for array in sub_array:
+            length = len(array)
+            if length >= 4096:
+                padded_sub_array.append(array[:4096])
+            else:
+                pad_width = (0, 4096 - length)
+                padded_array = np.pad(array, pad_width, mode='constant')
+                padded_sub_array.append(padded_array)
+                
+        padded_arrays.append(padded_sub_array)
+        
+    return padded_arrays
 
 
 def time_to_samples(time, unit, samplerate):
