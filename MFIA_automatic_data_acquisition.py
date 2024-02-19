@@ -436,13 +436,21 @@ def evaluate_scope_file(data, threasholds):
     return filtered_peaks, parameters
 
 
-def view_file(data):
+def view_file(data, title=""):
     
     clockbase = 60E6
     Vdiv = 41
     
     wave_nodepath = "/dev3258/scopes/0/wave"
+    
+    for key in data.item().keys():
+        if "/dev" in key:
+            wave_nodepath = key
+    
     fig, axes = plt.subplots(1,2)
+    
+    if title:
+        fig.suptitle(title)
     
     for record in data.item()[wave_nodepath]:
         
@@ -518,9 +526,10 @@ print("exit")
 
 
 # %% test 1
+
 wave_nodepath = "/dev3258/scopes/0/wave" 
 
-folder = r"D:\Session 240209 B3_9 sb\raw"
+folder = r"D:\Session 240215 BTA C10 N bs\post lunch"
 
 
 plt.ion()
@@ -549,7 +558,7 @@ for file in os.listdir(folder):
     
     thresholdsBTAC10 = {16: [0.1, 0.30]}
     
-    a1, a2 = evaluate_scope_file(np.load(folder + '\\' + file, allow_pickle = True), thresholdsPVDF)
+    a1, a2 = evaluate_scope_file(np.load(folder + '\\' + file, allow_pickle = True), thresholdsBTAC10)
     
     #a1, a2 = evaluate_scope_file(np.load(folder + '\\' + file, allow_pickle = True), thresholds)
     
@@ -666,3 +675,18 @@ for i, group in enumerate(groups):
 plt.show()
 plt.plot([x[0] for x in groups], alphas)
 
+
+
+# %% plot all files
+folder = r"D:\Session 250216 BTA C10 mm heated 343 K\\"
+
+for file in os.listdir(folder):
+    filename, ext = os.path.splitext(file)
+    
+    #Skip all files that arent .npy.
+    if not ext == ".npy":
+        continue
+    
+    view_file(np.load(folder + file, allow_pickle=True), filename)
+
+    
