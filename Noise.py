@@ -11,46 +11,26 @@ import pandas as pd
 import scipy
 import os
 import powerlaw
-
-
-def read_data(filepath):
-    
-    colnames = []
-    
-    with open(filepath, 'r') as file:
-        
-        last_line = ""
-        
-        for line_number, line in enumerate(file, start=1):
-            if line.startswith("%"):
-                last_line = line
-            else:
-                colnames = last_line.replace('%',"").replace("\n","").split(";")
-                break
-
-    data = pd.read_csv(filepath, comment='%', sep=';',
-                       names=colnames).values
-
-    t = data[0:, 0]
-    ch1 = data[0:, 1]
-    ch2 = np.zeros(len(t))
-    
-    
-    if len(colnames) > 2:
-        if not np.isnan(data[0, 2]):
-            ch2 = data[0:, 2]
-
-    return t, ch1, ch2, colnames
+import helper_functions as hp
 
 
 def evalutae_noise(t, y, labels):
-    fft_result = np.abs(np.fft.rfft(y))
+   
     dt = t[1] - t[0]
-    frequencies = np.fft.rfftfreq(len(y), d=dt)
-
     y = y - np.average(y)
-    yrms =  np.sqrt(np.average(y**2))
+    
+    #fft_result = np.abs(np.fft.rfft(y))
+    #frequencies = np.fft.rfftfreq(len(y), d=dt)
 
+    
+    yrms =  np.sqrt(np.average(y**2))
+    #frequencies, psd = plt.psd(y, Fs=1/dt)
+
+    #plt.title('PSD: ' + labels[1])
+    #plt.xlabel('Frequency (Hz)')
+    #plt.ylabel('Power/Frequency (dB/Hz)')
+    #plt.grid(True)
+    #plt.show()
 
     plt.plot(t, y)
     plt.xlabel(labels[0])
@@ -61,10 +41,10 @@ def evalutae_noise(t, y, labels):
     plt.title(str(round(1 / dt / 1E6, 1)) + "MS/s")
     plt.show()
     
-    plt.plot(frequencies, np.abs(fft_result)**2)
-    plt.xscale('log')
-    plt.yscale('log')
-    plt.show()
+    #plt.plot(frequencies, np.abs(fft_result)**2)
+    #plt.xscale('log')
+    #plt.yscale('log')
+    #plt.show()
     
     
     if "(V)" in labels[1]:
@@ -82,7 +62,7 @@ def evaluate_files(folder):
             continue
 
         try:
-            t, ch1, ch2, colnames = read_data(folder + '\\' + file)
+            t, ch1, ch2, colnames = hp.read_data(folder + '\\' + file)
             dt = t[1] - t[0]
             
             evalutae_noise(t, ch1, colnames[:2])
@@ -98,7 +78,7 @@ def evaluate_files(folder):
 
 #folder_noiseA = r"Z:\Group Members\Hecker, Marcel\240125_Measurement\Current\Noise MFIA"
 #folder_noiseV = r"Z:\Group Members\Hecker, Marcel\240125_Measurement\Voltage\Noise MFIA"
-folder_noiseVA = r"Z:\Group Members\Hecker, Marcel\240125_Measurement\Votlage & Current"
+folder_noiseVA = r"Z:\Group Members\Hecker, Marcel\240125_Measurement\Votlage & Current Noise 60MSs"
 
 #evaluate_files(folder_noiseA)
 #evaluate_files(folder_noiseV)
