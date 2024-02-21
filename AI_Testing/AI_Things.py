@@ -5,7 +5,6 @@ Created on Fri Feb 16 16:56:08 2024
 @author: av179
 """
 
-
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader, TensorDataset, random_split
@@ -22,8 +21,8 @@ def load_data(folder_path):
     
     return arrays
 
-good_folder_path = './Good'
-bad_folder_path = './Bad'
+good_folder_path = r"C:\Local\Marcel\Good"
+bad_folder_path = r"C:\Local\Marcel\Bad"
 
 good_data = load_data(good_folder_path)
 bad_data = load_data(bad_folder_path)
@@ -41,7 +40,7 @@ X = np.concatenate([good_data, bad_data], axis=0)
 y = np.asarray([1]*len(good_data)+[0]*len(bad_data), dtype="long")  # Labels
 
 
-X = X.reshape(X.shape[0], -1)
+#X = X.reshape(X.shape[0], -1)
 
 X = torch.tensor(X, dtype=torch.float32)
 y = torch.tensor(y, dtype=torch.float32)
@@ -55,13 +54,16 @@ train_data, test_data = random_split(dataset, [0.9, 0.1])
 #X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=42)
 
 
-model = nn.Sequential(
-    nn.Linear(2*4096, 512), 
-    nn.ReLU(),
-    nn.Linear(512, 128),
-    nn.ReLU(),
-    nn.Linear(128, 1)
-)
+# =============================================================================
+# model = nn.Sequential(
+#     nn.Linear(2*4096, 512), 
+#     nn.ReLU(),
+#     nn.Linear(512, 128),
+#     nn.ReLU(),
+#     nn.Linear(128, 1),
+#     nn.Sigmoid()
+# )
+# =============================================================================
 
 
 # Define the LSTM model
@@ -85,19 +87,21 @@ class LSTMModel(nn.Module):
 
 #model = nn.LSTM(2, 512, num_layers=4, batch_first=True)
 
+lstm_model = LSTMModel(2*4096, 512, 4, 1)
+
 # Define loss function and optimizer
-criterion = nn.BCELoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
+criterion = nn.BCEWithLogitsLoss()
+optimizer = optim.Adam(lstm_model.parameters(), lr=0.001)
 
 train_loader = DataLoader(train_data, batch_size=128, shuffle=True)
 
 # Training loop
-epochs = 200
+epochs = 500
 
 for epoch in range(epochs):
     for inputs, labels in train_loader:
         optimizer.zero_grad()
-        outputs = model(inputs)
+        outputs = lstm_model(inputs)
         loss = criterion(outputs, labels.view(-1, 1))
         loss.backward()
         optimizer.step()
@@ -105,14 +109,15 @@ for epoch in range(epochs):
     print(f'Epoch [{epoch+1}/{epochs}], Loss: {loss.item():.4f}')
 
 
-model.eval()
+#model.eval()
+lstm_model.eval()
 
 # Evaluate the model
 with torch.no_grad():
-    outputs = model(dataset.tensors[0][test_data.indices])
+    outputs = lstm_model(dataset.tensors[0][test_data.indices])
     predictions = (outputs >= 0.5).float()
     accuracy = torch.mean((predictions == dataset.tensors[1][test_data.indices].view(-1, 1)).float())
     print(f'Accuracy: {accuracy.item():.4f}')
 
 
-torch.save(model.state_dict(), "test.pth")
+torch.save(lstm_model.state_dict(), "test.pth")
