@@ -461,12 +461,8 @@ def view_file(data, title="",fig = None, axes=None):
         if "/dev" in key:
             wave_nodepath = key
     
-<<<<<<< HEAD
-    fig, axes = plt.subplots(1,2)
-=======
     if not fig and not axes:
         fig, axes = plt.subplots(1,1)
->>>>>>> 3f206fa (add coarse_sieving)
     
     if len(title) > 0:
         fig.suptitle(title)
@@ -484,14 +480,10 @@ def view_file(data, title="",fig = None, axes=None):
         
         t = np.arange(-totalsamples, 0) * dt + (timestamp - triggertimestamp) / float(clockbase)
         
-<<<<<<< HEAD
-        axes[0].plot(t, ch1)
-        axes[1].plot(t, ch2)
-=======
+
         #print(np.max(ch2))
         axes.plot(t, ch1)
         #axes[1].plot(t, ch2)
->>>>>>> 3f206fa (add coarse_sieving)
         
 
 def view_file_proc(data):
