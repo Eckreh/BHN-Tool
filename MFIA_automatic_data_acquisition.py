@@ -16,7 +16,9 @@ import scipy
 import Barkhausen_Noise_Marcel as bhm
 import powerlaw
 import sys
-
+import torch.nn as nn
+import torch
+import shutil
 
 # %% functions
 
@@ -157,7 +159,7 @@ daq.setInt("/%s/currins/0/autorange" % device, 1)
 
 daq.sync()
 
-time.sleep(7) # Wait 2s for autorange to complete
+time.sleep(5) # Wait 5s for autorange to complete
 
 scopeModule = daq.scopeModule()
 scopeModule.set("mode", 1) # TODO: Check this!
@@ -410,7 +412,7 @@ def evaluate_scope_file(data, threasholds):
                 threashold_spike, threashold_continus = threasholds[hf.closest_key(threasholds, appV*Vdiv)]
                 
                 if (maxdb > threashold_spike) or (diff > threashold_continus): # 1.8 to include sigular events 
-                   
+
                     plt.plot(st, sch1, label=str(maxdb) + " " + str(diff*1E10))
                     plt.draw()
                     
@@ -448,7 +450,7 @@ def evaluate_scope_file(data, threasholds):
     return filtered_peaks, parameters
 
 
-def view_file(data, title=""):
+def view_file(data, title="",fig = None, axes=None):
     
     clockbase = 60E6
     Vdiv = 41
@@ -459,9 +461,14 @@ def view_file(data, title=""):
         if "/dev" in key:
             wave_nodepath = key
     
+<<<<<<< HEAD
     fig, axes = plt.subplots(1,2)
+=======
+    if not fig and not axes:
+        fig, axes = plt.subplots(1,1)
+>>>>>>> 3f206fa (add coarse_sieving)
     
-    if title:
+    if len(title) > 0:
         fig.suptitle(title)
     
     for record in data.item()[wave_nodepath]:
@@ -477,8 +484,14 @@ def view_file(data, title=""):
         
         t = np.arange(-totalsamples, 0) * dt + (timestamp - triggertimestamp) / float(clockbase)
         
+<<<<<<< HEAD
         axes[0].plot(t, ch1)
         axes[1].plot(t, ch2)
+=======
+        #print(np.max(ch2))
+        axes.plot(t, ch1)
+        #axes[1].plot(t, ch2)
+>>>>>>> 3f206fa (add coarse_sieving)
         
 
 def view_file_proc(data):
@@ -487,6 +500,36 @@ def view_file_proc(data):
         plt.plot(dataset[0], dataset[1])
     
 
+
+def coarse_sieving(folder):
+    global pressed_key
+    
+    fig, axes = plt.subplots(1,1)
+    
+    for file in os.listdir(folder):
+        filename, ext = os.path.splitext(file)  
+    
+    
+        if not ext == ".npy":
+            continue
+        
+        view_file(np.load(os.path.join(folder, filename), allow_pickle=True), str(filename), fig, axes)
+        plt.draw()
+        
+        while not plt.waitforbuttonpress():
+            print("looping")
+        
+        plt.cla()
+        
+        if pressed_key == " ":
+            print(f"PASS: {file}")
+            shutil.move(os.path.join(folder, 'pass', filename))
+        else:
+            print(f"FAIL: {file}")
+            shutil.move(os.path.join(folder, 'fail', filename))
+            
+        pressed_key = -1
+    
 # %% test 0
 folder = r"D:\Older PVDF Data\B3_9 bs 2.6Vpp"
 
