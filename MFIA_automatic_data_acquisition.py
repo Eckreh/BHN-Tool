@@ -500,11 +500,17 @@ def view_file_proc(data):
         plt.plot(dataset[0], dataset[1])
     
 
-
 def coarse_sieving(folder):
     global pressed_key
     
+    if not os.path.exists(os.path.join(folder,"fail")):
+        os.makedirs(os.path.join(folder,"fail"))
+        
+    if not os.path.exists(os.path.join(folder,"pass")):
+        os.makedirs(os.path.join(folder,"pass"))
+    
     fig, axes = plt.subplots(1,1)
+    plt.connect("key_press_event", on_press)
     
     for file in os.listdir(folder):
         filename, ext = os.path.splitext(file)  
@@ -513,7 +519,7 @@ def coarse_sieving(folder):
         if not ext == ".npy":
             continue
         
-        view_file(np.load(os.path.join(folder, filename), allow_pickle=True), str(filename), fig, axes)
+        view_file(np.load(os.path.join(folder, file), allow_pickle=True), str(filename), fig, axes)
         plt.draw()
         
         while not plt.waitforbuttonpress():
@@ -523,10 +529,10 @@ def coarse_sieving(folder):
         
         if pressed_key == " ":
             print(f"PASS: {file}")
-            shutil.move(os.path.join(folder, 'pass', filename))
+            shutil.move(os.path.join(folder, file), os.path.join(folder, 'pass', file))
         else:
             print(f"FAIL: {file}")
-            shutil.move(os.path.join(folder, 'fail', filename))
+            shutil.move(os.path.join(folder, file), os.path.join(folder, 'fail', file))
             
         pressed_key = -1
     
