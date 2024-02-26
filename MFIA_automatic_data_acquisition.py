@@ -116,11 +116,11 @@ input1 = 1 # "currin0", "current_input0": Current Input 1
 input2 = 8 # "auxin0", "auxiliary_input0": Aux Input 1
 stream_rate = 6 # "938_kHz": 938 kHz
 
-#device_id = "dev3258"
-device_id = "dev5236"
+device_id = "dev3258"
+#device_id = "dev5236"
 
-#server_host = "192.168.50.234"
-server_host = "192.168.81.210"
+server_host = "192.168.50.234"
+#server_host = "192.168.81.210"
 
 server_port = 8004
 
@@ -184,7 +184,7 @@ wave_nodepath = f"/{device}/scopes/0/wave"
 scopeModule.subscribe(wave_nodepath)
 
 i = 0
-while i < 2:
+while i < 50:
     i += 1
     
     data_with_trig = get_scope_records(device, daq, scopeModule, 100)
@@ -450,7 +450,7 @@ def evaluate_scope_file(data, threasholds):
     return filtered_peaks, parameters
 
 
-def view_file(data, title="",fig = None, axes=None):
+def view_file(data, title="",fig = None, axes=None, ch2ax=None):
     
     clockbase = 60E6
     Vdiv = 41
@@ -481,9 +481,11 @@ def view_file(data, title="",fig = None, axes=None):
         t = np.arange(-totalsamples, 0) * dt + (timestamp - triggertimestamp) / float(clockbase)
         
 
-        #print(np.max(ch2))
         axes.plot(t, ch1)
-        #axes[1].plot(t, ch2)
+        
+        if ch2ax:
+            ch2ax.plot(t, ch2)
+        
         
 
 def view_file_proc(data):
@@ -492,16 +494,20 @@ def view_file_proc(data):
         plt.plot(dataset[0], dataset[1])
     
 
-def coarse_sieving(folder):
+def coarse_sieving(folder, view_ch2=False, viewonly=False):
     global pressed_key
     
-    if not os.path.exists(os.path.join(folder,"fail")):
-        os.makedirs(os.path.join(folder,"fail"))
-        
-    if not os.path.exists(os.path.join(folder,"pass")):
-        os.makedirs(os.path.join(folder,"pass"))
     
     fig, axes = plt.subplots(1,1)
+    
+    
+    axes.set_prop_cycle('color', plt.cm.tab20c(np.linspace(0, 1, 100)))
+    
+    if view_ch2:
+        ch2ax = axes.twinx()
+    else:
+        ch2ax = None
+    
     plt.connect("key_press_event", on_press)
     
     for file in os.listdir(folder):
@@ -511,13 +517,25 @@ def coarse_sieving(folder):
         if not ext == ".npy":
             continue
         
-        view_file(np.load(os.path.join(folder, file), allow_pickle=True), str(filename), fig, axes)
+        view_file(np.load(os.path.join(folder, file), allow_pickle=True), str(filename), fig, axes, ch2ax=ch2ax)
         plt.draw()
         
         while not plt.waitforbuttonpress():
             print("looping")
         
-        plt.cla()
+        if view_ch2:
+            ch2ax.clear()
+            
+        axes.clear()
+        
+        if viewonly:
+            continue
+        
+        if not os.path.exists(os.path.join(folder,"fail")):
+            os.makedirs(os.path.join(folder,"fail"))
+            
+        if not os.path.exists(os.path.join(folder,"pass")):
+            os.makedirs(os.path.join(folder,"pass"))
         
         if pressed_key == " ":
             print(f"PASS: {file}")
@@ -741,3 +759,22 @@ for file in os.listdir(folder):
     view_file(np.load(folder + file, allow_pickle=True), filename)
 
     
+
+
+# =============================================================================
+# scope.subscribe('/dev3258/scopes/0/wave')
+# scope.execute()
+# # To read the acquired data from the module, use a
+# # while loop like the one below. This will allow the
+# # data to be plotted while the measurement is ongoing.
+# # Note that any device nodes that enable the streaming
+# # of data to be acquired, must be set before the while loop.
+# # result = 0
+# # while scope.progress() < 1.0 and not scope.finished():
+# #     time.sleep(1)
+# #     result = scope.read()
+# #     print(f"Progress {float(scope.progress()) * 100:.2f} %\r")
+# scope.finish()
+# scope.unsubscribe('*')
+# 
+# =============================================================================
