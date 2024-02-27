@@ -19,6 +19,7 @@ import sys
 import torch.nn as nn
 import torch
 import shutil
+from mpl_axes_aligner import align
 
 # %% functions
 
@@ -450,7 +451,7 @@ def evaluate_scope_file(data, threasholds):
     return filtered_peaks, parameters
 
 
-def view_file(data, title="",fig = None, axes=None, ch2ax=None):
+def view_file(data, title="", fig = None, axes=None, ch2ax=None):
     
     clockbase = 60E6
     Vdiv = 41
@@ -501,10 +502,9 @@ def coarse_sieving(folder, view_ch2=False, viewonly=False):
     fig, axes = plt.subplots(1,1)
     
     
-    axes.set_prop_cycle('color', plt.cm.tab20c(np.linspace(0, 1, 100)))
-    
     if view_ch2:
         ch2ax = axes.twinx()
+        ch2ax.set_prop_cycle('color', plt.cm.Greens(np.linspace(0, 1, 100)))
     else:
         ch2ax = None
     
@@ -651,7 +651,7 @@ print("exit")
     
 # %% test 2
 
-data = np.load(r"\\netfilec.ad.uni-heidelberg.de\home\a\av179\Desktop\Experimental eval\data_scope\Session 240209 B3_9 sb\scope_eval_2024-02-13_15-12.npz", allow_pickle=True)
+data = np.load(r"D:\Session 240215 PVDF\8. 30V\scope_eval_2024-02-21_13-43.npz", allow_pickle=True)
 
 data_old1 = np.load(r"P:\Desktop\Experimental eval\data_scope\Older Data\B3_9 bs\scope_eval_2024-02-13_17-32.npz", allow_pickle=True)
 data_old2 = np.load(r"P:\Desktop\Experimental eval\data_scope\Older Data\B3_9 bs 2.6Vpp\scope_eval_2024-02-13_17-36.npz", allow_pickle=True)
@@ -778,3 +778,55 @@ for file in os.listdir(folder):
 # scope.unsubscribe('*')
 # 
 # =============================================================================
+
+# %% Anton
+
+fig, axes = plt.subplots(1,1)
+
+wave_nodepath = "/dev3258/scopes/0/wave"
+
+data = np.load(r"D:\Session 240220\B3_5 _bs\120\pass\2024-02-20_15-02-12.npy", allow_pickle=True)
+
+num = -1
+
+for record in data.item()[wave_nodepath]:
+    
+    num += 1
+    
+    if num < 6 or num > 6:
+        continue
+    
+    ch1 = record[0]["wave"][0, :]
+    ch2 = record[0]["wave"][1, :] * 41
+    
+    totalsamples = record[0]["totalsamples"]
+    dt = record[0]["dt"]
+    
+    timestamp = record[0]["timestamp"]
+    triggertimestamp = record[0]["triggertimestamp"]
+    
+    t = np.arange(-totalsamples, 0) * dt + (timestamp - triggertimestamp) / float(60E6)
+    
+    #axes.plot(t, ch1, label=str(num))
+    pl1 = axes.plot(t, ch1, label="current response", color="blue")
+    ax2 = axes.twinx()
+    #pl2 = ax2.plot(t, ch2, label="driving voltage", color="green")
+    
+    
+    jerks = hf.calculate_derivative(t, ch1)**2
+    bl = hf.interpolate_baseline(t, jerks)
+    
+    pl2 = ax2.plot(t, jerks-bl, color="red", label="slew-rate")
+    
+    axes.set_xlabel("Time [s]")
+    #axes.set_ylabel("Current [A]")
+    ax2.set_ylabel("Voltage [V]")
+    ax2.set_ylabel("slew rate [A^2/s^2]")
+  
+    align.yaxes(axes, 0, ax2, 0, 0.5)  
+    
+#axes.legend()
+pls = pl1+pl2
+labs = [pl.get_label() for pl in pls]
+
+axes.legend(pls, labs)
