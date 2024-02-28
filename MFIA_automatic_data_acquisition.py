@@ -348,7 +348,7 @@ def evaluate_scope_file_old(data, threasholds):
     return filtered_peaks, parameters
 
 
-def evaluate_scope_file(data, threasholds):
+def evaluate_scope_file(data, threasholds, filename):
     global pressed_key
     
     clockbase = 60E6
@@ -363,14 +363,37 @@ def evaluate_scope_file(data, threasholds):
     
     avg_len = -1
     
-    for record in data.item()[wave_nodepath]:
+    transitions_dwm_detect = {
+        'Default':  {1: 'Up', -1: 'Down', 0: 'Default'},
+        'Up' :      {1: 'DWM', -1: 'PN_-1', 0: 'Up'},
+        'PN_-1' :    {1: "PN_1", -1: 'DWM', 0: 'PN_-1'},
+        'Down':     {1: 'PN_1', -1: 'DWM', 0: 'Down'},
+        'PN_1':     {1: 'DWM', -1: 'PN_-1', 0: 'PN_1'},
+        'DWM':    {1: 'DWM', -1:'DWM', 0: 'DWM'},
+    }
+    
+    fsm_waveformdetect = hf.StateMachine("Default", transitions_dwm_detect)
+    
+    for num, record in enumerate(data.item()[wave_nodepath]):
     
         ch1 = record[0]["wave"][0, :]
         ch2 = record[0]["wave"][1, :]
         
-        st = hf.SchmittTrigger(0.01, 0.005)
-        trigger = [st.process_input(abs(x)) for x in ch2]
+        # TODO: get frequency, risetime, Wavetype (DWM, PN)
         
+        st = hf.SchmittTrigger(0.01, 0.005)
+        
+        triggerUp = np.asarray([st.process_input(x) for x in ch2])
+        st.reset()
+        triggerDown = -1*np.asarray([st.process_input(-x) for x in ch2])
+        st.reset()
+        
+        triggersequence, triggerindex = hf.extract_consecutive(triggerDown + triggerUp)
+        
+        fsm_waveformdetect.process_input(triggersequence)
+        
+        
+        trigger = [st.process_input(abs(x)) for x in ch2]
         
         totalsamples = record[0]["totalsamples"]
         dt = record[0]["dt"]
@@ -391,13 +414,23 @@ def evaluate_scope_file(data, threasholds):
         sliced_ch1 = hf.slice_array(ch1, trigger)
         sliced_t = hf.slice_array(t, trigger)
         
+        if "PN" in str(fsm_waveformdetect):
+            edgets = t[triggerindex[np.nonzero(triggersequence)]]
+            edgedts = hf.calculate_differences_every_second(edgets)
+            freq = 1/np.average(edgedts)
+        
+        plt.plot(t, ch2)
+        plt.plot(t, triggerDown+triggerUp)
+        
+        plt.waitforbuttonpress()
+        
         if avg_len < 0:
             for bt in sliced_t:
                 avg_len += len(bt)
                 
             avg_len /= len(sliced_t)
-        
-        
+
+
         for sch1, st in zip(sliced_ch1, sliced_t):
             if len(st) > avg_len*0.7:
                 
@@ -412,7 +445,7 @@ def evaluate_scope_file(data, threasholds):
                 
                 threashold_spike, threashold_continus = threasholds[hf.closest_key(threasholds, appV*Vdiv)]
                 
-                if (maxdb > threashold_spike) or (diff > threashold_continus): # 1.8 to include sigular events 
+                if (maxdb > threashold_spike) or (diff > threashold_continus):
 
                     plt.plot(st, sch1, label=str(maxdb) + " " + str(diff*1E10))
                     plt.draw()
@@ -425,12 +458,25 @@ def evaluate_scope_file(data, threasholds):
                     if pressed_key == " ":
                         print("KEEP:" + str(maxdb) + " " + str(diff*1E10) + " @ " + str(appV*Vdiv))
                         filtered_peaks.append([st, sch1])
-                        good_peaks.append([st-st[0],abs(np.asarray(sch1))])
-                        parameters.append({"Vapp": appV*Vdiv, "Vraw": appV, "threashold_spike": threashold_spike, "threashold_continus": threashold_continus, "samples_to_average": samples_to_average})
+                        good_peaks.append([st-st[0], abs(np.asarray(sch1))])
+                        
+                        metadata = {
+                            "Vapp": appV*Vdiv,
+                            "Vraw": appV,
+                            "threashold_spike": threashold_spike,
+                            "threashold_continus": threashold_continus,
+                            "samples_to_average": samples_to_average,
+                            "waveform": str(fsm_waveformdetect),
+                            "frequency": freq,
+                            "file": filename,
+                            "num": num
+                            }
+                        
+                        parameters.append(metadata)
+                        
                     else:
                         print("DISCARD:" + str(maxdb) + " " + str(diff*1E10) + " @ " + str(appV*Vdiv))
                         discard_peaks.append([st-st[0],abs(np.asarray(sch1))])
-                        
                         
                     pressed_key = -1
                     time.sleep(0.1)
@@ -486,9 +532,9 @@ def view_file(data, title="", fig = None, axes=None, ch2ax=None):
         
         if ch2ax:
             ch2ax.plot(t, ch2)
+            align.yaxes(axes, 0, ch2ax, 0, 0.5)
         
         
-
 def view_file_proc(data):
     
     for dataset in data:
@@ -628,7 +674,7 @@ for file in os.listdir(folder):
     
     thresholdsBTAC10 = {16: [0.1, 0.30]}
     
-    a1, a2 = evaluate_scope_file(np.load(folder + '\\' + file, allow_pickle = True), thresholdsPVDF)
+    a1, a2 = evaluate_scope_file(np.load(folder + '\\' + file, allow_pickle = True), thresholdsPVDF, str(filename))
     
     #a1, a2 = evaluate_scope_file(np.load(folder + '\\' + file, allow_pickle = True), thresholds)
     
@@ -811,7 +857,6 @@ for record in data.item()[wave_nodepath]:
     pl1 = axes.plot(t, ch1, label="current response", color="blue")
     ax2 = axes.twinx()
     #pl2 = ax2.plot(t, ch2, label="driving voltage", color="green")
-    
     
     jerks = hf.calculate_derivative(t, ch1)**2
     bl = hf.interpolate_baseline(t, jerks)
