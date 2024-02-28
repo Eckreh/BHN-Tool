@@ -529,7 +529,6 @@ def calculate_derivative(data_x, data_y, dtype="simple"):
 # Absolute code removed add later again!
 #
 
-
 def group_numbers_within(numbers, diffrence, absolute=False):
     """
     Groups numbers within a certain difference threshold.
@@ -585,8 +584,52 @@ def group_numbers_within(numbers, diffrence, absolute=False):
     return groups
 
 
+def extract_consecutive(input_list):
+    values = []
+    indices = []
+
+    if len(input_list) == 0:
+        return values, indices
+
+    current_value = input_list[0]
+    current_index = 0
+
+    for index, value in enumerate(input_list[1:], start=1):
+        if value != current_value:
+            values.append(current_value)
+            indices.append(current_index)
+            current_value = value
+            current_index = index
+
+    values.append(current_value)
+    indices.append(current_index)
+
+    values = np.asarray(values)
+    indices = np.asarray(indices)
+
+    return values, indices
+
+
+def calculate_differences_every_second(arr):
+    differences = []
+    for i in range(len(arr) - 2):
+        if i + 2 < len(arr):
+            diff = arr[i + 2] - arr[i]
+            differences.append(diff)
+    return differences
+
 if __name__ == "__main__":
     print("This is just a file with functions nothing more")
+
+
+# Yes, i know a SchmittTrigger could also be implemented as a FSM.
+# like
+#  transition =     {
+#                       0: {1: 1, 0: 0}.
+#                       1: {1: 1, 0: 0}
+#                   }
+#   fsm.process_input(1 if x >= high elif 0 x =< low)
+#
 
 class SchmittTrigger:
     """
@@ -625,7 +668,11 @@ class SchmittTrigger:
         self.v_high = v_high
         self.v_low = v_low
         self.output = 0
-
+        
+    
+    def reset(self):
+        self.output = 0
+    
     def process_input(self, input_voltage):
         
         """
@@ -648,3 +695,32 @@ class SchmittTrigger:
             self.output = 0
 
         return self.output
+
+
+class StateMachine:
+    def __init__(self, init_state, transitions, return_state=False):
+        
+        self.transitions = transitions
+        self.current_state = init_state
+        self.init_state = init_state
+        self.return_state = return_state
+
+    def process_input(self, input_sequence):
+        for inp in input_sequence:
+            if inp in self.transitions[self.current_state]:
+                self.current_state = self.transitions[self.current_state][inp]
+            else:
+                print(f"Invalid transition from {self.current_state} with input {inp}")
+                raise NotImplementedError()
+                break
+            
+            if self.return_state:
+                return self.current_state
+            
+            
+    def reset(self):
+        self.current_state = self.init_state
+        
+            
+    def __str__(self):
+        return self.current_state
