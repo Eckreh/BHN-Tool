@@ -391,7 +391,9 @@ def evaluate_scope_file(data, threasholds, filename):
         triggersequence, triggerindex = hf.extract_consecutive(triggerDown + triggerUp)
         
         fsm_waveformdetect.process_input(triggersequence)
+        waveform = str(fsm_waveformdetect)
         
+        fsm_waveformdetect.reset()
         
         trigger = [st.process_input(abs(x)) for x in ch2]
         
@@ -406,23 +408,26 @@ def evaluate_scope_file(data, threasholds, filename):
         
         t = np.arange(-totalsamples, 0) * dt + (timestamp - triggertimestamp) / float(clockbase)
         
-        cond = abs(ch2) > np.max(abs(ch2))*0.96
-        
-        appV = np.average(abs(ch2[cond]))
-        #print("V_app: " + str(appV*Vdiv))
         
         sliced_ch1 = hf.slice_array(ch1, trigger)
         sliced_t = hf.slice_array(t, trigger)
         
-        if "PN" in str(fsm_waveformdetect):
+      
+        if "PN" in waveform:
             edgets = t[triggerindex[np.nonzero(triggersequence)]]
             edgedts = hf.calculate_differences_every_second(edgets)
             freq = 1/np.average(edgedts)
+            
+            cond = abs(ch2) > np.max(abs(ch2))*0.96
+            appV = np.average(abs(ch2[cond]))
+        else:
+            print("THIS NOT IMPLEMETED YET!")
         
-        plt.plot(t, ch2)
-        plt.plot(t, triggerDown+triggerUp)
-        
-        plt.waitforbuttonpress()
+        #plt.plot(t, ch2)
+        #plt.plot(t, triggerDown+triggerUp)
+        #print(freq)
+        #print(triggersequence)
+        #plt.waitforbuttonpress()
         
         if avg_len < 0:
             for bt in sliced_t:
@@ -466,11 +471,13 @@ def evaluate_scope_file(data, threasholds, filename):
                             "threashold_spike": threashold_spike,
                             "threashold_continus": threashold_continus,
                             "samples_to_average": samples_to_average,
-                            "waveform": str(fsm_waveformdetect),
+                            "waveform": waveform,
                             "frequency": freq,
                             "file": filename,
                             "num": num
                             }
+                        
+                        print(metadata)
                         
                         parameters.append(metadata)
                         
@@ -571,6 +578,7 @@ def coarse_sieving(folder, view_ch2=False, viewonly=False):
         
         if view_ch2:
             ch2ax.clear()
+            ch2ax.set_prop_cycle('color', plt.cm.Greens(np.linspace(0, 1, 100)))
             
         axes.clear()
         
