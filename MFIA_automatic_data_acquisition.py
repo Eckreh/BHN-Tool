@@ -21,6 +21,10 @@ import torch
 import shutil
 from mpl_axes_aligner import align
 
+
+plt.rcParams.update({'font.size': 18})
+#plt.rcParams.update({'figure.autolayout': True})
+
 # %% functions
 
 def get_scope_records(device, daq, scopeModule, num_records=1):
