@@ -529,57 +529,36 @@ def calculate_derivative(data_x, data_y, dtype="simple"):
 # Absolute code removed add later again!
 #
 
-def group_numbers_within(numbers, diffrence, absolute=False):
-    """
-    Groups numbers within a certain difference threshold.
+def group_numbers(numbers, difference=1, absolute=True):
+    if len(numbers) == 0:
+        return []
 
-    Parameters
-    ----------
-    numbers : list of numeric
-        The list of numbers to be grouped.
-    diffrence : float
-        The maximum allowed difference between numbers for them to be grouped together.
-    absolute : bool, optional
-        If True, the difference is treated as absolute. Defaults to False.
-
-    Returns
-    -------
-    list of tuples
-        A list of tuples where each tuple contains the starting number of the group and the indices of numbers within the group.
-
-    Notes
-    -----
-    This function sorts the numbers and groups them based on their differences.
-    Numbers within the specified difference (or absolute difference) are grouped together.
-    If the difference is not absolute, each number is compared with the previous number in the group multiplied by (1 + diffrence).
-    If absolute is True, each number is compared with the previous number plus the specified difference.
-
-    Example
-    -------
-    >>> numbers = [1, 2, 4, 6, 7, 9, 11, 14, 16]
-    >>> group_numbers_within(numbers, 1)
-    [(1, [0, 1]), (4, [2]), (6, [3, 4]), (9, [5]), (11, [6]), (14, [7]), (16, [8])]
-    """
-    
     numbers_with_index = [(num, i) for i, num in enumerate(numbers)]
     numbers_with_index.sort(key=lambda x: x[0])
 
     groups = []
-    current_group = []
+    current_group = [numbers_with_index[0]]
 
-    for num, index in numbers_with_index:
+    for num, index in numbers_with_index[1:]:
+        group_values = [num_index[0] for num_index in current_group]
+        group_avg = np.mean(group_values)
 
-        maxval = current_group[-1][0] * (1+diffrence)
+        if absolute:
+            diff = difference
+        else:
+            diff = group_avg * difference
 
-        if not current_group or num <= maxval:
+        if np.abs(num - group_avg) <= diff:
             current_group.append((num, index))
         else:
-            groups.append((current_group[0][0], [x[1] for x in current_group]))
+            mean_value = np.mean(group_values)
+            indices = [int(num_index[1]) for num_index in current_group]
+            groups.append((mean_value, indices))
             current_group = [(num, index)]
 
-    # Add the last group
-    if current_group:
-        groups.append((current_group[0][0], [x[1] for x in current_group]))
+    mean_value = np.mean([num_index[0] for num_index in current_group])
+    indices = [int(num_index[1]) for num_index in current_group]
+    groups.append((mean_value, indices))
 
     return groups
 
