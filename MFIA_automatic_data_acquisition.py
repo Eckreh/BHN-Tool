@@ -599,7 +599,53 @@ def coarse_sieving(folder, view_ch2=False, viewonly=False):
             shutil.move(os.path.join(folder, file), os.path.join(folder, 'fail', file))
             
         pressed_key = -1
+
+
+def power_law(x, a1, b1):
+    return  b1*x**(-a1)
+
+
+def plot_group(group, ax = None):
     
+    bhdata = []
+    
+    for i in range(len(group[1])):
+        
+        data_t = arr1[group[1][i]][0] - arr1[group[1][i]][0][0]
+        data_y = np.asarray(arr1[group[1][i]][1])
+        absy = abs(data_y)
+        
+        #plt.plot(data_t, data_y)
+        #plt.show()
+        
+        #plt.plot(data_t, absy)
+        #plt.show()
+        
+        bhdata.extend(bhm.analyzeBH(data_t, absy, 1E-5))
+        
+    #bhm.analyze(bhdata, xmin=6e-3, xmax=1E2, binnumber=50)
+    
+    edges, hist = powerlaw.pdf(bhdata, number_of_bins = 50)
+    
+    bin_centers = (edges[1:] + edges[:-1]) / 2.0
+    fit = powerlaw.Fit(bhdata)
+    fit.power_law.plot_pdf(label=r'$\alpha_{ML}$'+"={}$\pm {}$".format(round(fit.alpha, 2), round(fit.sigma, 2)), ax = ax)
+    
+    
+    p0 = [1.5, 1]
+    popt, pcov = scipy.optimize.curve_fit(power_law, bin_centers, hist, p0=p0)
+    
+    print(popt)
+    
+    ax.scatter(bin_centers, hist)
+    ax.plot(bin_centers, power_law(bin_centers, *popt), label=r"$\alpha_{lin}$" + f"{popt[0]:.2f}")
+    ax.legend()
+    ax.set_title(f"{group[0]:.1f} V")
+    
+    plt.ylabel(r'probability P($S=S_i$)')
+    plt.xlabel(r'Slew-Rate $S=\left[\frac{A^2}{s^2}\right]$')
+    
+    return fit.alpha    
 # %% test 0
 folder = r"D:\Older PVDF Data\B3_9 bs 2.6Vpp"
 
