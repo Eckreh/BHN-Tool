@@ -729,66 +729,56 @@ for x,y in arr1:
     
 print("exit")
 
-# %% testo
+# %% group and plot
 
 numbers = [x["Vapp"] for x in arr2]
-groups = hf.group_numbers_within(numbers, 0.5, True)
+groups = hf.group_numbers(numbers, 0.5, True)
 
+
+#for mean, indices in groups:
+#    nums = [numbers[idx] for idx in indices]
+#    print(f"Mean: {mean}, Numbers: {nums}")
+ 
+
+for mean, indices in groups:
+    print(mean, str(len(indices)))
+
+if len(groups) == 1:
+    fig, axes = plt.subplots(1,1)
+    plot_group(groups[0], axes)
+else:
+    for group in groups:
+        fig, axes = plt.subplots(1,1)
+        plot_group(group, axes)
+        
 #print([item[0] for item in groups])
 
-fig, axes = plt.subplots(3,3)
+#fig, axes = plt.subplots(3,3)
 
-for i, group in enumerate(groups):
+#for i, group in enumerate(groups):
     
-    axes[i // 3, i % 3].set_title(f"{group[0]:.1f} V")
+    #axes[i // 3, i % 3].set_title(f"{group[0]:.1f} V")
     
-    for j in group[1]:
-        axes[i // 3, i % 3].plot(arr1[j][0]-arr1[j][0][0],arr1[j][1])
+    #for j in group[1]:
+        #axes[i // 3, i % 3].plot(arr1[j][0]-arr1[j][0][0],arr1[j][1])
         
-    
+
+
 # %%test^4
-def plot_group(group, ax = None):
-    
-    bhdata = []
-    
-    for i in range(len(group[1])):
-        
-        data_t = arr1[group[1][i]][0] - arr1[group[1][i]][0][0]
-        data_y = np.asarray(arr1[group[1][i]][1])
-        absy = abs(data_y)
-        
-        #plt.plot(data_t, data_y)
-        #plt.show()
-        
-        #plt.plot(data_t, absy)
-        #plt.show()
-        
-        bhdata.extend(bhm.analyzeBH(data_t, absy, 1E-5))
-        
-    #bhm.analyze(bhdata, xmin=6e-3, xmax=1E2, binnumber=50)
-    
-    edges, hist = powerlaw.pdf(bhdata, number_of_bins = 50)
-    
-    bin_centers = (edges[1:] + edges[:-1]) / 2.0
-    fit = powerlaw.Fit(bhdata)
-    fit.power_law.plot_pdf(label=r'$\alpha_{ML}$'+"={}$\pm {}$".format(round(fit.alpha, 2), round(fit.sigma, 2)), ax = ax)
-    ax.scatter(bin_centers, hist)
-    ax.legend()
-    ax.set_title(f"{group[0]:.1f} V")
-    
-    return fit.alpha
+
+## MOVE PLOT GROUP FUNC To funcs
 
 
-fig2, axes2 = plt.subplots(3,3)
+#fig2, axes2 = plt.subplots(3,3)
 
-alphas = []
+#alphas = []
 
-for i, group in enumerate(groups):
-    alphas.append(plot_group(group, axes2[i // 3, i % 3]))
+#for i, group in enumerate(groups):
+#    alphas.append(plot_group(group, axes2[i // 3, i % 3]))
     
     
-plt.show()
-plt.plot([x[0] for x in groups], alphas)
+#plt.show()
+#plt.plot([x[0] for x in groups], alphas)
 
 
 
