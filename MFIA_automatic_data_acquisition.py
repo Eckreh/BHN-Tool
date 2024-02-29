@@ -642,7 +642,7 @@ def plot_group(group, ax = None):
     print(popt)
     
     ax.scatter(bin_centers, hist)
-    ax.plot(bin_centers, power_law(bin_centers, *popt), label=r"$\alpha_{lin}$" + f"{popt[0]:.2f}")
+    ax.plot(bin_centers, power_law(bin_centers, *popt), label=r"$\alpha_{lin} = $" + f"{popt[0]:.2f}")
     ax.legend()
     ax.set_title(f"{group[0]:.1f} V")
     
