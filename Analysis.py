@@ -15,13 +15,30 @@ import shutil
 from mpl_axes_aligner import align
 
 
+## Adjust these: 
 Vdiv = 41  # or 23
+pre_addtime = 2E-4    # 2E-4 120Hz PD
+pre_cuttime = 4E-4    # 4E-4 120Hz PD
+trig_high = 0.01
+trig_low = 0.005
+
+
 clockbase = 60E6
+pressed_key = -1
 
 
+def on_press(event):
+    global pressed_key
+    pressed_key = event.key
+    
 
 def evaluate_section(t, ch1, ch2, dt, threasholds, filename, num=-1):
-
+    global pressed_key
+    global pre_addtime
+    global pre_cuttime
+    global trig_high
+    global trig_low
+    
     filtered_peaks = []
     discard_peaks = []
     good_peaks = []
@@ -51,7 +68,7 @@ def evaluate_section(t, ch1, ch2, dt, threasholds, filename, num=-1):
 
 
     # TODO: get frequency, risetime
-    st = hf.SchmittTrigger(0.01, 0.005)
+    st = hf.SchmittTrigger(trig_high, trig_low)
     
     triggerUp = np.asarray([st.process_input(x) for x in ch2])
     st.reset()
@@ -66,20 +83,23 @@ def evaluate_section(t, ch1, ch2, dt, threasholds, filename, num=-1):
     fsm_waveformdetect.reset()
     trigger = [st.process_input(abs(x)) for x in ch2]
     
-    trigger = hf.preplace_ones(trigger, hf.time_to_samples(2E-4, "s", 1/dt))
-    trigger = hf.reduce_ones(trigger, hf.time_to_samples(3E-4, "s", 1/dt))
+    trigger = hf.preplace_ones(trigger, hf.time_to_samples(pre_addtime, "s", 1/dt))
+    trigger = hf.reduce_ones(trigger, hf.time_to_samples(pre_cuttime, "s", 1/dt))
     
     sliced_ch1 = hf.slice_array(ch1, trigger)
     sliced_t = hf.slice_array(t, trigger)
+    
+    fsm_peaks = hf.StateMachine("Default",transitions_splp)
     
     if "PN" in waveform:
         
         edgets = t[triggerindex[np.nonzero(triggersequence)]]
         # TODO: Change this similar to DWM for captured fractions
-        edgedts = hf.calculate_differences_every_second(edgets)
-        freq = 1/np.average(edgedts)
+        edgedts = hf.calculate_differences_every_nth(edgets,1)
+        freq = 1/(2*np.average(edgedts))
         cond = abs(ch2) > np.max(abs(ch2))*0.96
         appV = np.average(abs(ch2[cond]))
+        peaksequnce = [fsm_peaks.process_input([x]) for x in triggersequence[np.nonzero(triggersequence)]]
         
     elif "DWM" in waveform:
         
@@ -96,12 +116,7 @@ def evaluate_section(t, ch1, ch2, dt, threasholds, filename, num=-1):
         
         edgedts = hf.filter_array(edgedts, 20)
         freq = 1/(4*np.mean(edgedts))
-        
-        fsm_peaks = hf.StateMachine("Default",transitions_splp)
-        
         peaksequnce = [fsm_peaks.process_input([x]) for x in triggersequence[np.nonzero(triggersequence)]]
-        print(peaksequnce)
-        
     else:
         raise NotImplemented
         
@@ -133,6 +148,7 @@ def evaluate_section(t, ch1, ch2, dt, threasholds, filename, num=-1):
             if (maxdb > threashold_spike) or (diff > threashold_continus):
 
                 plt.plot(st, sch1, label=str(maxdb) + " " + str(diff*1E10))
+               
                 plt.title(pt)
                 plt.draw()
                 
@@ -188,11 +204,13 @@ def evaluate_section(t, ch1, ch2, dt, threasholds, filename, num=-1):
 
 
 def evaluate_scope_file(data, threasholds, filename):
-    global pressed_key
     global Vdiv
     global clockbase
    
     filetype = hf.determine_filetype(data)
+    
+    arr0 = [] 
+    arr1 = []
     
     if filetype == "NPY":
         
@@ -210,8 +228,65 @@ def evaluate_scope_file(data, threasholds, filename):
             ch1 = record[0]["wave"][0, :]
             ch2 = record[0]["wave"][1, :]
     
-            evaluate_section(t, ch1, ch2, dt, threasholds, threasholds, num)
+            a0, a1 = evaluate_section(t, ch1, ch2, dt, threasholds, threasholds, num)
+            
+            if len(a1) > 0:
+                arr0.append(a0)
+                arr1.append(a1)
+                
+            
+    elif filetype == "CSV":
+        
+        t, ch1, ch2, _ = data
+        dt = t[1]-t[0]
+        arr0, arr1 = evaluate_section(t, ch1, ch2, dt, threasholds, filename)
+        
+    
+    return arr0, arr1
 
 
-testdata = np.load(r"D:\Session 240209 B3_9 sb\raw\2024-02-09_15-11-36.npy", allow_pickle=True)
-evaluate_scope_file(testdata,{0:[0,0]},"testfile")
+
+plt.ion()
+plt.connect("key_press_event", on_press)
+
+folder = r"D:\Older PVDF Data\B3_9 bs"
+
+
+ar1 = []
+ar2 = []
+
+thresholdsPVDF = {20: [2, 2E-10],
+                  29: [2, 6.1E-10],
+                  33: [6, 10.29E-10]}
+  
+thresholdsBTAC10 = {16: [0.1, 0.30]}
+
+
+
+for file in os.listdir(folder):
+    
+    filename, ext = os.path.splitext(file)
+    
+  
+    if ext == ".npy":
+        print("Eval'ing: " + str(filename))
+        a1, a2 = evaluate_scope_file(np.load(folder + '\\' + file, allow_pickle = True), thresholdsPVDF, str(filename))
+        
+    elif ext == ".txt":
+        print("Eval'ing: " + str(filename))
+        a1, a2 = evaluate_scope_file(hf.read_data(folder + '\\' + file), thresholdsPVDF, str(filename))
+                                     
+                                     
+    if len(a1) > 0:
+        ar1.append(a1)
+        ar2.append(a2)
+
+
+starttime = datetime.now().strftime("%Y-%m-%d_%H-%M")
+
+flatar1 = [item for sublist in ar1 for item in sublist]
+flatar2 = [item for sublist in ar2 for item in sublist]
+npar1 = np.asarray(flatar1, dtype="object")
+np.savez_compressed("scope_eval_" + str(starttime), npar1, flatar2)
+
+print("exit")
