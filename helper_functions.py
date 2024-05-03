@@ -413,7 +413,7 @@ def interpolate_baseline(data_x, data_y):
 
 
 # TODO: This might have a bug! It doesnt matter for [{timestamp:[...],value:[...]}]
-# but should be look at see example
+# but should be looked at. see example
 def concat_dict_array(existing_array, additional_array):
     """
     Concatenates dictionaries in two arrays by updating the existing array in-place.
@@ -525,10 +525,6 @@ def calculate_derivative(data_x, data_y, dtype="simple"):
         return None
 
 
-# TODO: this is also somehow broken
-# Absolute code removed add later again!
-#
-
 def group_numbers(numbers, difference=1, absolute=True):
     if len(numbers) == 0:
         return []
@@ -589,13 +585,51 @@ def extract_consecutive(input_list):
     return values, indices
 
 
-def calculate_differences_every_second(arr):
+def calculate_differences_every_nth(arr, n=2):
     differences = []
-    for i in range(len(arr) - 2):
-        if i + 2 < len(arr):
-            diff = arr[i + 2] - arr[i]
+    for i in range(len(arr) - n):
+        if i + n < len(arr):
+            diff = arr[i + n] - arr[i]
             differences.append(diff)
     return differences
+
+
+def filter_array(array, percentage):
+    while True:
+        array_average = np.mean(array)
+        threshold = array_average * percentage / 100
+        mask = np.abs(array - array_average) <= threshold
+        filtered_array = array[mask]
+        
+        if np.array_equal(filtered_array, array):
+            break
+        
+        array = filtered_array
+        
+    return filtered_array
+
+
+def group_data_by_metadata(metadata, metadata_key, transform_func=None):
+    grouped_data = {}
+    for idx, meta in enumerate(metadata):
+        if metadata_key in meta:
+            if transform_func:
+                meta_value = transform_func(meta[metadata_key])
+            else:
+                meta_value = meta[metadata_key]
+            if meta_value not in grouped_data:
+                grouped_data[meta_value] = [idx]
+            else:
+                grouped_data[meta_value].append(idx)
+    return grouped_data
+
+def determine_filetype(data):
+    try:
+        data.item()
+        return "NPY"
+    except AttributeError:
+        return "CSV"
+
 
 if __name__ == "__main__":
     print("This is just a file with functions nothing more")
@@ -611,38 +645,8 @@ if __name__ == "__main__":
 #
 
 class SchmittTrigger:
-    """
-    Implements a Schmitt trigger.
-
-    Attributes
-    ----------
-    v_high : float
-        The upper threshold voltage. When the input voltage exceeds this threshold, the output is set to 1.
-    v_low : float
-        The lower threshold voltage. When the input voltage falls below this threshold, the output is set to 0.
-    output : int
-        The current output state of the Schmitt trigger.
-
-    Methods
-    -------
-    __init__(v_high, v_low)
-        Initializes the SchmittTrigger object with the specified high and low voltage thresholds.
-    process_input(input_voltage)
-        Processes the input voltage and determines the output state of the Schmitt trigger.
-    """
     
     def __init__(self, v_high, v_low):
-        
-        """
-        Initializes a SchmittTrigger object.
-
-        Parameters
-        ----------
-        v_high : float
-            The upper threshold voltage.
-        v_low : float
-            The lower threshold voltage.
-        """
         
         self.v_high = v_high
         self.v_low = v_low
@@ -654,20 +658,6 @@ class SchmittTrigger:
     
     def process_input(self, input_voltage):
         
-        """
-        Processes the input voltage and determines the output state of the Schmitt trigger.
-
-        Parameters
-        ----------
-        input_voltage : float
-            The input voltage to be processed.
-
-        Returns
-        -------
-        int
-            The output state of the Schmitt trigger (0 or 1).
-        """
-        
         if input_voltage >= self.v_high:
             self.output = 1
         elif input_voltage <= self.v_low:
@@ -677,14 +667,15 @@ class SchmittTrigger:
 
 
 class StateMachine:
-    def __init__(self, init_state, transitions, return_state=False):
+    
+    def __init__(self, init_state, transitions):
         
         self.transitions = transitions
         self.current_state = init_state
         self.init_state = init_state
-        self.return_state = return_state
 
     def process_input(self, input_sequence):
+        
         for inp in input_sequence:
             if inp in self.transitions[self.current_state]:
                 self.current_state = self.transitions[self.current_state][inp]
@@ -692,9 +683,9 @@ class StateMachine:
                 print(f"Invalid transition from {self.current_state} with input {inp}")
                 raise NotImplementedError()
                 break
+         
+        return self.current_state
             
-            if self.return_state:
-                return self.current_state
             
             
     def reset(self):

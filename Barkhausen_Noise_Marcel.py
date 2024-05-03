@@ -230,8 +230,6 @@ if __name__ == "__main__":
             ch1av = hp.combine_points(ch1_slice[prob_index])
             
               
-        
-        
         # Smooth Data
         if smooth_data:
             sos = scipy.signal.butter(4, 15E3, 'lowpass', fs=1/dt, output='sos')
